@@ -2,8 +2,8 @@ import express from 'express'
 import { ObjectId } from 'mongodb'
 import { validateObjectId } from '../middleware/validators.mjs'
 import { asyncHandler } from '../middleware/errorHandler.mjs'
-import { getSupabaseClient } from '../config/storage.mjs'
-import { getPathFromUrl, deleteSupabaseFolder, deleteProductFolders, sanitizeFolderName, BUCKET_NAME } from '../utils/supabase.mjs'
+import { getSupabaseClient, getBucketName } from '../config/storage.mjs'
+import { getPathFromUrl, deleteSupabaseFolder, deleteProductFolders, sanitizeFolderName } from '../utils/supabase.mjs'
 import logger from '../utils/logger.mjs'
 
 const router = express.Router()
@@ -74,6 +74,7 @@ router.put('/:id',
   asyncHandler(async (req, res) => {
     const { _id, ...updates } = req.body
     const supabase = getSupabaseClient()
+    const activeBucket = getBucketName()
     
     logger.request(req, `Updating product: ${req.params.id}`)
     logger.debug('Product update data', { 
@@ -103,7 +104,7 @@ router.put('/:id',
         const oldPath = getPathFromUrl(existingProduct.image)
         if (oldPath) {
           logger.info(`Deleting old main image: ${oldPath}`, { requestId: req.requestId })
-          await supabase.storage.from(BUCKET_NAME).remove([oldPath])
+          await supabase.storage.from(activeBucket).remove([oldPath])
         }
       }
       
@@ -116,7 +117,7 @@ router.put('/:id',
           const pathsToDelete = imagesToDelete.map(url => getPathFromUrl(url)).filter(Boolean)
           if (pathsToDelete.length > 0) {
             logger.info(`Deleting ${pathsToDelete.length} removed additional images`, { requestId: req.requestId })
-            await supabase.storage.from(BUCKET_NAME).remove(pathsToDelete)
+            await supabase.storage.from(activeBucket).remove(pathsToDelete)
           }
         }
       }
@@ -126,7 +127,7 @@ router.put('/:id',
         const oldModelPath = getPathFromUrl(existingProduct.arModelUrl)
         if (oldModelPath) {
           logger.info(`Deleting old AR model: ${oldModelPath}`, { requestId: req.requestId })
-          await supabase.storage.from(BUCKET_NAME).remove([oldModelPath])
+          await supabase.storage.from(activeBucket).remove([oldModelPath])
         }
       }
       
@@ -155,7 +156,7 @@ router.put('/:id',
                 variant: oldVariant.name,
                 assets: filteredAssets
               })
-              const { error: removeError } = await supabase.storage.from(BUCKET_NAME).remove(filteredAssets)
+              const { error: removeError } = await supabase.storage.from(activeBucket).remove(filteredAssets)
               if (removeError) {
                 logger.error('Error removing variant assets', removeError, { requestId: req.requestId })
               }
@@ -188,7 +189,7 @@ router.put('/:id',
                 requestId: req.requestId,
                 assets: filteredAssets
               })
-              await supabase.storage.from(BUCKET_NAME).remove(filteredAssets)
+              await supabase.storage.from(activeBucket).remove(filteredAssets)
             }
           }
         }

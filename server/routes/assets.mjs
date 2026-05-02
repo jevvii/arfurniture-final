@@ -1,6 +1,6 @@
 import express from 'express'
 import { GetObjectCommand } from '@aws-sdk/client-s3'
-import { getSupabaseClient, BUCKET_NAME } from '../config/storage.mjs'
+import { getSupabaseClient, getBucketName } from '../config/storage.mjs'
 import logger from '../utils/logger.mjs'
 
 const router = express.Router()
@@ -14,6 +14,7 @@ router.get('/*key', async (req, res) => {
   }
 
   const storage = getSupabaseClient()
+  const activeBucket = getBucketName()
 
   if (!storage || !storage.client) {
     logger.error('Storage client not initialized for asset proxy', { provider: process.env.STORAGE_PROVIDER })
@@ -21,10 +22,10 @@ router.get('/*key', async (req, res) => {
   }
 
   try {
-    logger.info(`Proxying asset from ${BUCKET_NAME}: ${key}`)
+    logger.info(`Proxying asset from ${activeBucket}: ${key}`)
     
     const command = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: activeBucket,
       Key: key.replace(/^\/+/, '') // Remove any leading slashes
     })
 
@@ -39,12 +40,12 @@ router.get('/*key', async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
     
     // Convert Web Stream to Node Stream if necessary (SDK v3 compatibility)
-    if (response.Body && typeof (response.Body as any).pipe === 'function') {
-      (response.Body as any).pipe(res)
+    if (response.Body && typeof response.Body.pipe === 'function') {
+      response.Body.pipe(res)
     } else {
       // Fallback for different SDK/Runtime versions
-      const stream = response.Body as any
-      if (stream.transformToWebStream) {
+      const stream = response.Body
+      if (stream && stream.transformToWebStream) {
         const reader = stream.transformToWebStream().getReader();
         const pump = async () => {
           const { done, value } = await reader.read();

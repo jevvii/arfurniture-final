@@ -9,7 +9,15 @@ import {
 import logger from '../utils/logger.mjs'
 
 let supabaseClient = null
-export let BUCKET_NAME = 'arfurniture'
+let BUCKET_NAME = 'arfurniture'
+
+export const getBucketName = () => {
+  // If not initialized yet, try to read from env now
+  if (BUCKET_NAME === 'arfurniture') {
+     BUCKET_NAME = process.env.STORAGE_BUCKET || process.env.STORJ_BUCKET || process.env.SUPABASE_STORAGE_BUCKET || 'arfurniture';
+  }
+  return BUCKET_NAME;
+}
 
 const toErrorPayload = (error) => ({
   message: error?.message || String(error),
@@ -206,7 +214,7 @@ export const initializeSupabase = () => {
   const endpoint = process.env.STORJ_ENDPOINT
   const accessKeyId = process.env.STORJ_ACCESS_KEY_ID
   const secretAccessKey = process.env.STORJ_SECRET_ACCESS_KEY
-  const region = process.env.STORJ_REGION || 'global'
+  const region = process.env.STORJ_REGION || 'us-east-1'
   const publicBaseUrl = process.env.STORJ_PUBLIC_BASE_URL
 
   if (!endpoint || !accessKeyId || !secretAccessKey) {

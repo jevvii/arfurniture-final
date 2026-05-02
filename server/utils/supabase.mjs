@@ -1,6 +1,6 @@
 import path from 'path'
 import logger from './logger.mjs'
-import { BUCKET_NAME } from '../config/storage.mjs'
+import { getBucketName } from '../config/storage.mjs'
 
 // Helper to sanitize folder names
 export const sanitizeFolderName = (name) => {
@@ -31,7 +31,8 @@ export const getPathFromUrl = (url) => {
   if (!url) return null
   try {
     const parsed = new URL(url)
-    const bucketToken = `/${BUCKET_NAME}/`
+    const bucketName = getBucketName()
+    const bucketToken = `/${bucketName}/`
     const pathname = parsed.pathname || ''
     const markerIndex = pathname.indexOf(bucketToken)
 
@@ -58,12 +59,13 @@ export const deleteSupabaseFolder = async (supabase, folderPath) => {
     return
   }
   
-  logger.info(`Initiating recursive purge for path: ${folderPath}`)
+  const bucketName = getBucketName()
+  logger.info(`Initiating recursive purge for path: ${folderPath} in ${bucketName}`)
   
   try {
     // List files and folders at this path
     const { data: list, error: listError } = await supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .list(folderPath, {
         limit: 1000,
         sortBy: { column: 'name', order: 'asc' }
@@ -104,7 +106,7 @@ export const deleteSupabaseFolder = async (supabase, folderPath) => {
       if (files.length > 0) {
         logger.info(`Deleting ${files.length} files from ${folderPath}`)
         const { error: removeError } = await supabase.storage
-          .from(BUCKET_NAME)
+          .from(bucketName)
           .remove(files)
 
         if (removeError) {
@@ -133,4 +135,4 @@ export const deleteProductFolders = async (supabase, productName) => {
   await deleteSupabaseFolder(supabase, folderName)
 }
 
-export { BUCKET_NAME }
+export const BUCKET_NAME = getBucketName()

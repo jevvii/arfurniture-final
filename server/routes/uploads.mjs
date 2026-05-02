@@ -2,7 +2,7 @@ import express from 'express'
 import multer from 'multer'
 import { validateFileUpload, validateImageFile, validateModelFile } from '../middleware/validators.mjs'
 import { asyncHandler } from '../middleware/errorHandler.mjs'
-import { getSupabaseClient, BUCKET_NAME } from '../config/storage.mjs'
+import { getSupabaseClient, getBucketName } from '../config/storage.mjs'
 import { sanitizeFolderName, sanitizeFileName, getPathFromUrl, deleteSupabaseFolder } from '../utils/supabase.mjs'
 import logger from '../utils/logger.mjs'
 
@@ -57,8 +57,9 @@ router.post('/image',
     }
     
     // Upload new image
+    const bucketName = getBucketName()
     const { error } = await supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true
@@ -70,7 +71,7 @@ router.post('/image',
     }
     
     const { data: publicUrlData } = supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .getPublicUrl(filePath)
     
     const url = publicUrlData.publicUrl
@@ -103,8 +104,9 @@ router.post('/additional-image',
       type: req.file.mimetype
     })
     
+    const bucketName = getBucketName()
     const { error } = await supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true
@@ -116,7 +118,7 @@ router.post('/additional-image',
     }
     
     const { data: publicUrlData } = supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .getPublicUrl(filePath)
     
     const url = publicUrlData.publicUrl
@@ -147,7 +149,7 @@ router.delete('/additional-image',
       logger.info(`Deleting additional image: ${filePath}`, { requestId: req.requestId, url: imageUrl })
       
       const { error } = await supabase.storage
-        .from(BUCKET_NAME)
+        .from(getBucketName())
         .remove([filePath])
       
       if (error) {
@@ -198,8 +200,9 @@ router.post('/model',
     await deleteSupabaseFolder(supabase, folderPath)
     
     // Upload new model
+    const bucketName = getBucketName()
     const { error } = await supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .upload(filePath, req.file.buffer, {
         contentType: 'model/gltf-binary',
         upsert: true
@@ -211,7 +214,7 @@ router.post('/model',
     }
     
     const { data: publicUrlData } = supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .getPublicUrl(filePath)
     
     const url = publicUrlData.publicUrl
@@ -246,9 +249,9 @@ router.post('/logo',
     // Optional: Delete old logos if we want to keep it clean, 
     // but might be safer to keep history for now or let admin delete manually (?)
     // For now, let's just upload.
-    
+    const bucketName = getBucketName()
     const { error } = await supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .upload(filePath, req.file.buffer, {
         contentType: req.file.mimetype,
         upsert: true
@@ -260,7 +263,7 @@ router.post('/logo',
     }
     
     const { data: publicUrlData } = supabase.storage
-      .from(BUCKET_NAME)
+      .from(bucketName)
       .getPublicUrl(filePath)
     
     const url = publicUrlData.publicUrl
