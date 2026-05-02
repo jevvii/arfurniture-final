@@ -6,15 +6,21 @@ export const CURRENCY = "₱";
 
 // Get API base URL from environment or construct it
 export const getApiBaseUrl = (): string => {
-  // In production (Vercel), use the env variable if provided, else default to empty string
-  // In development, it will use the provided env or fallback to localhost
+  // In production (Vercel), use the env variable if provided
   const envBase = (import.meta as any).env?.VITE_AUTH_API_BASE;
   
-  if (envBase !== undefined) {
+  if (envBase !== undefined && envBase !== 'undefined' && envBase !== '') {
     return envBase.replace(/\/$/, ''); // Remove trailing slash
   }
   
-  // In development, use localhost:4000
+  // If we are in production (not localhost), default to empty string for relative paths
+  if (typeof window !== 'undefined' && 
+      window.location.hostname !== 'localhost' && 
+      window.location.hostname !== '127.0.0.1') {
+    return '';
+  }
+  
+  // In local development, use localhost:4000
   return 'http://localhost:4000';
 };
 
