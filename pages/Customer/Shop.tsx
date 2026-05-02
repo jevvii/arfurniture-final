@@ -12,7 +12,7 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
     to={`/product/${product._id}`}
     className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col"
   >
-    <div className="aspect-[4/3] sm:aspect-square overflow-hidden bg-slate-100 relative">
+    <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100 relative">
       <ColorTintedImage
         src={resolveAssetUrl(product.imageUrl)}
         color={product.color}

@@ -48,7 +48,15 @@ export const resolveAssetUrl = (url: string | undefined): string => {
   // Ensure path starts with /
   const path = url.startsWith('/') ? url : `/${url}`;
   
-  return `${apiBase}${path}`;
+  // Final URL
+  const resolved = `${apiBase}${path}`;
+
+  // For AR compatibility, ensure the final URL is absolute
+  if (!resolved.startsWith('http') && typeof window !== 'undefined') {
+    return `${window.location.origin}${resolved}`;
+  }
+  
+  return resolved;
 };
 
 export const NAV_ITEMS_CUSTOMER = [

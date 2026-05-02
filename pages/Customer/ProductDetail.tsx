@@ -102,14 +102,17 @@ export const ProductDetail: React.FC = () => {
   useEffect(() => {
     if (searchParams.get('ar') === 'true' && product && !loading) {
       setShowARLaunch(true);
-      // Clear the ar param from URL
-      searchParams.delete('ar');
-      setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, product, loading]);
 
   // Function to trigger AR on model-viewer
   const launchAR = () => {
+    // Only clear search params when explicitly launching
+    if (searchParams.get('ar')) {
+      searchParams.delete('ar');
+      setSearchParams(searchParams, { replace: true });
+    }
+    
     setShowARLaunch(false);
     setViewMode('3d');
 
@@ -213,7 +216,7 @@ export const ProductDetail: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
         {/* Left Column: Media Viewer */}
         <div className="flex flex-col gap-4">
-          <div className="h-[500px] lg:h-[600px] bg-slate-100 rounded-2xl relative group overflow-hidden border border-slate-100">
+          <div className="aspect-[4/3] w-full bg-slate-100 rounded-2xl relative group overflow-hidden border border-slate-100">
 
             {viewMode === '3d' ? (
               <div className="w-full h-full animate-in fade-in duration-500">
@@ -265,7 +268,7 @@ export const ProductDetail: React.FC = () => {
                   setActiveImage(img.url);
                   setViewMode('image'); 
                 }}
-                className={`w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all ${selectedVariant?.id === img.variant?.id && viewMode === 'image' ? 'border-indigo-600 ring-2 ring-indigo-600/20' : 'border-slate-200 hover:border-indigo-300'}`}
+                className={`w-20 h-20 rounded-lg overflow-hidden border-2 flex-shrink-0 transition-all ${selectedVariant?.id === img.variant?.id && viewMode === 'image' ? 'border-indigo-600 ring-2 ring-indigo-600/20' : 'border-slate-200 hover:border-indigo-300'} aspect-square`}
               >
                 <ColorTintedImage 
                   src={img.url} 
@@ -513,7 +516,7 @@ export const ProductDetail: React.FC = () => {
               to={`/product/${rp._id}`}
               className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col"
             >
-              <div className="aspect-square overflow-hidden bg-slate-100 relative">
+              <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100 relative">
                 <ColorTintedImage
                   src={resolveAssetUrl(rp.imageUrl)}
                   color={rp.color}
