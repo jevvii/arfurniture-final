@@ -113,13 +113,19 @@ export const ProductDetail: React.FC = () => {
     setShowARLaunch(false);
     setViewMode('3d');
 
-    // Wait for model-viewer to mount, then trigger AR
-    setTimeout(() => {
+    // Attempt to trigger AR with a recursive retry if element isn't ready
+    let attempts = 0;
+    const trigger = () => {
       const modelViewer = document.querySelector('model-viewer');
       if (modelViewer && (modelViewer as any).activateAR) {
         (modelViewer as any).activateAR();
+      } else if (attempts < 10) {
+        attempts++;
+        setTimeout(trigger, 200);
       }
-    }, 500);
+    };
+    
+    trigger();
   };
 
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -475,13 +481,22 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              {/* QR Modal Trigger */}
+              {/* AR Trigger - Optimized for Mobile & Desktop */}
               <button
-                onClick={() => setIsQRModalOpen(true)}
-                className="flex-1 sm:flex-none sm:w-auto bg-white border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                onClick={() => {
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                    if (isMobile) {
+                        setViewMode('3d');
+                        // Small delay to ensure 3D is mounted
+                        setTimeout(launchAR, 300);
+                    } else {
+                        setIsQRModalOpen(true);
+                    }
+                }}
+                className="flex-1 sm:flex-none sm:w-auto bg-indigo-50 border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95"
               >
                 <Smartphone className="w-5 h-5" />
-                <span className="hidden sm:inline">Scan for </span>AR
+                <span>View in your room</span>
               </button>
             </div>
           </div>
