@@ -7,36 +7,69 @@ const router = express.Router()
 
 router.get('/*key', async (req, res) => {
   // Extract the object key from the URL path
-  // path-to-regexp v8 creates an array or single string for req.params.key
-  const key = Array.isArray(req.params.key) ? req.params.key.join('/') : req.params.key
+  const key = Array.isArray(req.params.key) ? req.params.key.join('/') : (req.params.key || req.params[0]);
   
-  logger.info(`Asset requested: path=${req.path}, key=${key}`)
+  if (!key) {
+    return res.status(400).send('Asset key is required');
+  }
+
   const storage = getSupabaseClient()
 
   if (!storage || !storage.client) {
-    // If using Supabase provider, storage.client doesn't exist, but we shouldn't hit this proxy anyway
-    return res.status(404).send('Not found or unsupported storage provider')
+    logger.error('Storage client not initialized for asset proxy', { provider: process.env.STORAGE_PROVIDER })
+    return res.status(500).send('Storage configuration error')
   }
 
   try {
+    logger.info(`Proxying asset from ${BUCKET_NAME}: ${key}`)
+    
     const command = new GetObjectCommand({
       Bucket: BUCKET_NAME,
-      Key: key
+      Key: key.replace(/^\/+/, '') // Remove any leading slashes
     })
 
     const response = await storage.client.send(command)
 
+    // Set headers
     res.setHeader('Content-Type', response.ContentType || 'application/octet-stream')
-    res.setHeader('Content-Length', response.ContentLength)
-    res.setHeader('Cache-Control', 'public, max-age=31536000') // Cache for 1 year
+    if (response.ContentLength) {
+      res.setHeader('Content-Length', response.ContentLength)
+    }
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('Access-Control-Allow-Origin', '*')
     
-    // Stream the S3 response directly to the client
-    response.Body.pipe(res)
+    // Convert Web Stream to Node Stream if necessary (SDK v3 compatibility)
+    if (response.Body && typeof (response.Body as any).pipe === 'function') {
+      (response.Body as any).pipe(res)
+    } else {
+      // Fallback for different SDK/Runtime versions
+      const stream = response.Body as any
+      if (stream.transformToWebStream) {
+        const reader = stream.transformToWebStream().getReader();
+        const pump = async () => {
+          const { done, value } = await reader.read();
+          if (done) {
+            res.end();
+            return;
+          }
+          res.write(value);
+          return pump();
+        };
+        pump();
+      } else {
+        throw new Error('Response body is not a recognizable stream')
+      }
+    }
   } catch (error) {
-    if (error.name === 'NoSuchKey') {
+    if (error.name === 'NoSuchKey' || error.code === 'NoSuchKey') {
+      logger.warn(`Asset not found in bucket: ${key}`)
       res.status(404).send('Asset not found')
     } else {
-      logger.error(`Error streaming asset: ${key}`, error)
+      logger.error(`Error streaming asset: ${key}`, { 
+        message: error.message,
+        code: error.code,
+        name: error.name
+      })
       res.status(500).send('Internal Server Error')
     }
   }
