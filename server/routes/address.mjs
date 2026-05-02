@@ -1,8 +1,6 @@
 import express from 'express'
 import { ObjectId } from 'mongodb'
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const { v4: uuidv4 } = require('uuid');
+import { v4 as uuidv4 } from 'uuid'
 import { asyncHandler } from '../middleware/errorHandler.mjs'
 import { validateRequiredFields } from '../middleware/validators.mjs'
 import logger from '../utils/logger.mjs'
