@@ -3,16 +3,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, X, Save, Upload, Box, AlertCircle, Image, PlusCircle, Loader2 } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
-import { CURRENCY, resolveAssetUrl } from '../../constants';
+import { CURRENCY, resolveAssetUrl, getApiBaseUrl } from '../../constants';
 import { ColorPicker } from '../../components/ColorPicker';
 
-// Detect if running on localhost (laptop) vs dev tunnel (phone)
-const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const TUNNEL_URL = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') ?? 'http://localhost:4000';
-
-// When on localhost: upload to localhost (fast, no size limits), save tunnel URL for mobile
-// When on phone/tunnel: must upload through tunnel (may hit size limits)
-const UPLOAD_BASE = isLocalhost ? 'http://localhost:4000' : TUNNEL_URL;
+const UPLOAD_BASE = getApiBaseUrl();
 
 export const ProductManager: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);

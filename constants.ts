@@ -8,19 +8,27 @@ export const CURRENCY = "₱";
 export const getApiBaseUrl = (): string => {
   // In production (Vercel), use the env variable if provided
   const envBase = (import.meta as any).env?.VITE_AUTH_API_BASE;
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   
+  // Use the env variable if it's valid AND it's not a localhost fallback being forced on production
   if (envBase !== undefined && envBase !== 'undefined' && envBase !== '') {
-    return envBase.replace(/\/$/, ''); // Remove trailing slash
+    const sanitizedBase = envBase.replace(/\/$/, '');
+    
+    // If we have a localhost env var but we are on a real domain, ignore it and use relative paths
+    if (!isLocalhost && sanitizedBase.includes('localhost')) {
+      return '';
+    }
+    
+    return sanitizedBase;
   }
   
-  // If we are in production (not localhost), default to empty string for relative paths
-  if (typeof window !== 'undefined' && 
-      window.location.hostname !== 'localhost' && 
-      window.location.hostname !== '127.0.0.1') {
+  // If no valid env var, and we are on a real domain, default to relative paths
+  if (!isLocalhost && typeof window !== 'undefined') {
     return '';
   }
   
-  // In local development, use localhost:4000
+  // In local development, default to localhost:4000
   return 'http://localhost:4000';
 };
 

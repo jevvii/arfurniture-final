@@ -2,11 +2,9 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Plus, Edit2, Trash2, X, Save, Upload, AlertCircle, Loader2 } from 'lucide-react';
 import { MarketingBanner } from '../../types';
 import { db } from '../../services/db';
-import { resolveAssetUrl } from '../../constants';
+import { resolveAssetUrl, getApiBaseUrl } from '../../constants';
 
-const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const TUNNEL_URL = (import.meta as any).env?.VITE_AUTH_API_BASE?.replace(/\/$/, '') ?? 'http://localhost:4000';
-const UPLOAD_BASE = isLocalhost ? 'http://localhost:4000' : TUNNEL_URL;
+const UPLOAD_BASE = getApiBaseUrl();
 
 export const MarketingManager: React.FC = () => {
     const [banners, setBanners] = useState<MarketingBanner[]>([]);
