@@ -12,12 +12,12 @@ const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
     to={`/product/${product._id}`}
     className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col"
   >
-    <div className="aspect-[4/3] w-full overflow-hidden bg-slate-100 relative">
+    <div className="aspect-[4/3] w-full overflow-hidden bg-slate-50 relative border-b border-slate-100">
       <ColorTintedImage
         src={resolveAssetUrl(product.imageUrl)}
         color={product.color}
         alt={product.name}
-        className="w-full h-full"
+        className="w-full h-full object-contain p-2"
       />
       <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
         {product.isNewArrival && (

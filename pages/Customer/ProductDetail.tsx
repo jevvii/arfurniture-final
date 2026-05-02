@@ -116,19 +116,21 @@ export const ProductDetail: React.FC = () => {
     setShowARLaunch(false);
     setViewMode('3d');
 
-    // Attempt to trigger AR with a recursive retry if element isn't ready
+    // Attempt to trigger AR via synthetic click on the native slot button
+    // This is often more reliable than the activateAR() method on mobile browsers
     let attempts = 0;
     const trigger = () => {
-      const modelViewer = document.querySelector('model-viewer');
-      if (modelViewer && (modelViewer as any).activateAR) {
-        (modelViewer as any).activateAR();
-      } else if (attempts < 10) {
+      const arButton = document.getElementById('ar-button');
+      if (arButton) {
+        arButton.click();
+      } else if (attempts < 15) {
         attempts++;
         setTimeout(trigger, 200);
       }
     };
     
-    trigger();
+    // Switch to 3D tab first, wait a moment for mount, then click
+    setTimeout(trigger, 500);
   };
 
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -236,24 +238,26 @@ export const ProductDetail: React.FC = () => {
                   src={activeImage}
                   color={selectedVariant?.color || product.color}
                   alt={product.name}
-                  className="w-full h-full"
+                  className="w-full h-full object-contain"
                 />
               </div>
             )}
+          </div>
 
-            {/* View Toggle Controller */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-white/90 backdrop-blur p-1.5 rounded-full shadow-lg border border-slate-200 flex gap-1">
+          {/* View Toggle Controller - Moved outside to prevent obstruction */}
+          <div className="flex justify-center -mt-2 mb-2 relative z-20">
+            <div className="bg-white p-1 rounded-full shadow-md border border-slate-200 flex gap-0.5 scale-90 sm:scale-100">
               <button
                 onClick={() => setViewMode('image')}
-                className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${viewMode === 'image' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewMode === 'image' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
               >
-                <ImageIcon className="w-4 h-4" /> Image
+                <ImageIcon className="w-3.5 h-3.5" /> Image
               </button>
               <button
                 onClick={() => setViewMode('3d')}
-                className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${viewMode === '3d' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-100'}`}
+                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewMode === '3d' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
               >
-                <Box className="w-4 h-4" /> 3D View
+                <Box className="w-3.5 h-3.5" /> 3D View
               </button>
             </div>
           </div>
