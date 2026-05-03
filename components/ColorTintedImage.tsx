@@ -26,12 +26,13 @@ export const ColorTintedImage: React.FC<ColorTintedImageProps> = ({
 
   if (!color) {
     return (
-      <img
-        src={src}
-        alt={alt || ''}
-        className={className}
-        style={style}
-      />
+      <div className={`relative overflow-hidden ${className}`} style={style}>
+        <img
+          src={src}
+          alt={alt || ''}
+          className="w-full h-full object-cover"
+        />
+      </div>
     );
   }
 
