@@ -9,7 +9,7 @@ import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { ModelViewerWrapper } from '../../components/ModelViewerWrapper';
 import { ColorTintedImage } from '../../components/ColorTintedImage';
-// import { QRCodeModal } from '../../components/QRCodeModal'; // Replaced by /ar/:id route
+import { QRCodeModal } from '../../components/QRCodeModal';
 import { CURRENCY, resolveAssetUrl } from '../../constants';
 
 export const ProductDetail: React.FC = () => {
@@ -27,6 +27,7 @@ export const ProductDetail: React.FC = () => {
   // Cart & Modal State
   const { cart, addToCart } = useCart();
   const { user } = useAuth();
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
@@ -151,7 +152,7 @@ export const ProductDetail: React.FC = () => {
                   poster={activeImage}
                   alt={`3D model of ${product.name}`}
                   color={selectedVariant?.color || product.color}
-                  productId={product._id}
+                  onARClick={() => setIsQRModalOpen(true)}
                 />
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-medium text-slate-600 pointer-events-none z-10">
                   Interactive 3D
@@ -413,14 +414,14 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              {/* AR Trigger - Routes to immersive AR page */}
-              <Link
-                to={`/ar/${product._id}`}
+              {/* AR Trigger - Desktop: QR modal. Mobile QR scans go to /ar/:id */}
+              <button
+                onClick={() => setIsQRModalOpen(true)}
                 className="flex-1 sm:flex-none sm:w-auto bg-indigo-50 border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95"
               >
                 <Smartphone className="w-5 h-5" />
                 <span>View in your room</span>
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -458,6 +459,14 @@ export const ProductDetail: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* QR Code Modal for AR (Desktop / Web) */}
+      <QRCodeModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        productId={product._id}
+        productName={product.name}
+      />
 
       {/* Stock Limit Modal */}
       {isStockModalOpen && (
