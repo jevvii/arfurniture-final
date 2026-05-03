@@ -163,29 +163,11 @@ export const ARView: React.FC = () => {
 
   // Auto-launch on Android when coming from QR scan
   useEffect(() => {
-    if (!autoLaunch || !product || loading) return;
+    if (!autoLaunch || !product || loading || launchingAR) return;
     if (arStatus !== 'not-presenting') return;
     if (platform.isIOS) return; // iOS can't auto-launch
-    if (platform.isAndroid) {
-      // Android: navigate directly to Scene Viewer intent (avoids JS hanging)
-      const modelUrl = resolveAssetUrl(product.arModelUrl);
-      if (modelUrl) {
-        const title = encodeURIComponent(product.name || 'Furniture');
-        const fallbackUrl = encodeURIComponent(window.location.href);
-        const intentUrl =
-          `intent://arvr.google.com/scene-viewer/1.0?` +
-          `file=${encodeURIComponent(modelUrl)}` +
-          `&mode=ar_preferred` +
-          `&title=${title}` +
-          `&resizable=true` +
-          `#Intent;` +
-          `scheme=https;` +
-          `package=com.google.android.googlequicksearchbox;` +
-          `action=android.intent.action.VIEW;` +
-          `S.browser_fallback_url=${fallbackUrl};` +
-          `end;`;
-        window.location.href = intentUrl;
-      }
+    if (platform.isAndroid && intentUrl) {
+      triggerSceneViewer(intentUrl);
       return;
     }
 
@@ -291,9 +273,8 @@ export const ARView: React.FC = () => {
         return;
       }
 
-      // Scene Viewer intent fallback
+      // Scene Viewer intent fallback via hidden iframe (avoids blank-screen navigation)
       const title = encodeURIComponent(product?.name || 'Furniture');
-      const fallbackUrl = encodeURIComponent(window.location.href);
       const intentUrl =
         `intent://arvr.google.com/scene-viewer/1.0?` +
         `file=${encodeURIComponent(modelUrl)}` +
@@ -304,17 +285,9 @@ export const ARView: React.FC = () => {
         `scheme=https;` +
         `package=com.google.android.googlequicksearchbox;` +
         `action=android.intent.action.VIEW;` +
-        `S.browser_fallback_url=${fallbackUrl};` +
         `end;`;
 
-      window.location.href = intentUrl;
-
-      // If still here after 2.5s, intent probably didn't open
-      setTimeout(() => {
-        setLaunchingAR(false);
-        setArError('Could not open AR. Make sure Google app / ARCore is installed.');
-      }, 2500);
-
+      triggerSceneViewer(intentUrl);
       clearSafety();
     } catch (e: any) {
       console.error('Unexpected AR launch error:', e);
@@ -351,12 +324,13 @@ export const ARView: React.FC = () => {
   const maxAvailable = selectedVariant?.stock ?? product.stock;
   const inAR = arStatus === 'session-started' || arStatus === 'object-placed';
 
-  // Pre-compute Scene Viewer intent URL for Android (guaranteed non-blocking)
+  // Pre-compute Scene Viewer intent URL for Android
   const modelUrl = resolveAssetUrl(product.arModelUrl);
   const intentUrl = React.useMemo(() => {
     if (!modelUrl || !platform.isAndroid) return '';
     const title = encodeURIComponent(product.name || 'Furniture');
-    const fallbackUrl = encodeURIComponent(window.location.href);
+    // NOTE: do NOT include S.browser_fallback_url — it causes blank-screen issues
+    // when the intent is handled by the browser before the app opens.
     return (
       `intent://arvr.google.com/scene-viewer/1.0?` +
       `file=${encodeURIComponent(modelUrl)}` +
@@ -367,10 +341,29 @@ export const ARView: React.FC = () => {
       `scheme=https;` +
       `package=com.google.android.googlequicksearchbox;` +
       `action=android.intent.action.VIEW;` +
-      `S.browser_fallback_url=${fallbackUrl};` +
       `end;`
     );
   }, [modelUrl, platform.isAndroid, product.name]);
+
+  // Trigger Scene Viewer via a hidden iframe so the current page never navigates away
+  const triggerSceneViewer = React.useCallback((url: string) => {
+    if (!url) return;
+    setLaunchingAR(true);
+
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'display:none;position:fixed;width:0;height:0;border:none;pointer-events:none;opacity:0;z-index:-1;';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    // If nothing happened after 3 s, the intent likely failed
+    setTimeout(() => {
+      setLaunchingAR(false);
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+      setArError('Could not open AR. Ensure Google app / ARCore is installed, or try Chrome.');
+    }, 3000);
+  }, []);
 
   const ModelViewer = 'model-viewer' as any;
 
@@ -503,13 +496,20 @@ export const ARView: React.FC = () => {
               Tap below to start AR. Point your camera at the floor and move slowly.
             </p>
 
-            <a
-              href={intentUrl}
-              className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 hover:bg-indigo-500 active:scale-95 transition-all flex items-center gap-3 mx-auto border border-indigo-400/30 no-underline"
+            <button
+              disabled={launchingAR}
+              onClick={() => triggerSceneViewer(intentUrl)}
+              className={`bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 transition-all flex items-center gap-3 mx-auto border border-indigo-400/30 ${
+                launchingAR ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
+              }`}
             >
-              <Box className="w-6 h-6" />
-              View in AR
-            </a>
+              {launchingAR ? (
+                <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Box className="w-6 h-6" />
+              )}
+              {launchingAR ? 'Launching...' : 'View in AR'}
+            </button>
           </div>
         </div>
       )}
@@ -612,13 +612,20 @@ export const ARView: React.FC = () => {
                   Reset Placement
                 </button>
               ) : platform.isAndroid && intentUrl ? (
-                <a
-                  href={intentUrl}
-                  className="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-indigo-500 active:scale-95 transition-all flex items-center justify-center gap-2 border border-indigo-400/30 no-underline"
+                <button
+                  disabled={launchingAR}
+                  onClick={() => triggerSceneViewer(intentUrl)}
+                  className={`flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border border-indigo-400/30 ${
+                    launchingAR ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
+                  }`}
                 >
-                  <Box className="w-4 h-4" />
-                  View in AR
-                </a>
+                  {launchingAR ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Box className="w-4 h-4" />
+                  )}
+                  {launchingAR ? 'Launching...' : 'View in AR'}
+                </button>
               ) : (
                 <button
                   disabled={launchingAR}
