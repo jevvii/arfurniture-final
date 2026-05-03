@@ -83,33 +83,37 @@ export const ModelViewerWrapper: React.FC<ModelViewerProps> = ({ src, poster, al
         src={src}
         poster={poster}
         alt={alt}
-        shadow-intensity="1"
+        shadow-intensity="1.5"
         shadow-softness="1"
         camera-controls
         auto-rotate
         ar
-        ar-modes="scene-viewer quick-look webxr"
+        ar-modes="webxr scene-viewer quick-look"
         ar-placement="floor"
         ar-scale="fixed"
         environment-image="neutral"
         exposure="1"
         loading="eager"
         reveal="auto"
+        camera-orbit="0deg 75deg 105%"
+        min-camera-orbit="auto auto auto"
+        max-camera-orbit="auto auto 150%"
+        interaction-prompt="auto"
         className="w-full h-full"
-        style={{ width: '100%', height: '100%', minHeight: '400px' }}
+        style={{ width: '100%', height: '100%', minHeight: '480px' }}
       >
         <button 
           slot="ar-button" 
           id="ar-button"
-          className="absolute bottom-4 right-4 bg-indigo-600 text-white px-6 py-3 rounded-full font-bold shadow-2xl cursor-pointer hover:bg-indigo-700 transition-all flex items-center gap-2 z-30 active:scale-95 border-none outline-none"
+          className="absolute top-4 right-4 bg-indigo-600 text-white px-5 py-2.5 rounded-full font-bold shadow-2xl cursor-pointer hover:bg-indigo-700 transition-all flex items-center gap-2 z-30 active:scale-95 border-none outline-none"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
-          <span className="text-sm">View in room</span>
+          <span className="text-sm font-bold">View in AR</span>
         </button>
 
         {/* Custom AR instructions */}
-        <div id="ar-prompt" className="hidden absolute bottom-20 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 pointer-events-none animate-bounce z-20">
-            <span className="text-[10px] font-black uppercase tracking-tight text-slate-700">Point at floor & move slowly</span>
+        <div id="ar-prompt" className="hidden absolute bottom-12 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur px-6 py-3 rounded-full shadow-lg flex items-center gap-2 pointer-events-none animate-bounce z-20 border border-slate-200">
+            <span className="text-xs font-black uppercase tracking-widest text-slate-800">Point at floor & move slowly</span>
         </div>
 
         {/* Loading spinner shown while 3D model loads */}

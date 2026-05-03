@@ -192,17 +192,17 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             <h1 className="text-2xl font-bold text-white mb-2">{product.name}</h1>
-            <p className="text-indigo-200 mb-8">Ready to view in your space</p>
+            <p className="text-indigo-200 mb-8 font-medium">Ready to project in your space</p>
 
             {/* Big AR Launch Button */}
             <button
               onClick={launchAR}
-              className="w-full bg-white text-indigo-900 py-5 px-8 rounded-2xl font-bold text-lg shadow-2xl hover:bg-indigo-50 transition-all flex items-center justify-center gap-3 animate-pulse"
+              className="w-full bg-white text-indigo-900 py-6 px-8 rounded-3xl font-black text-xl shadow-2xl hover:bg-indigo-50 transition-all flex flex-col items-center justify-center gap-2 animate-pulse active:scale-95"
             >
-              <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path>
-              </svg>
-              Tap to View in AR
+              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-1">
+                <Box className="w-6 h-6 text-indigo-600" />
+              </div>
+              Project into Room
             </button>
 
             <button
