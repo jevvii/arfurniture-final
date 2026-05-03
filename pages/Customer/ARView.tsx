@@ -124,6 +124,26 @@ export const ARView: React.FC = () => {
     setDiagnostics(d);
   };
 
+  // Pre-compute Scene Viewer intent URL for Android
+  // Moved up to ensure it's available for effects
+  const modelUrl = resolveAssetUrl(product?.arModelUrl);
+  const intentUrl = React.useMemo(() => {
+    if (!modelUrl || !platform.isAndroid || !product) return '';
+    const title = encodeURIComponent(product.name || 'Furniture');
+    return (
+      `intent://arvr.google.com/scene-viewer/1.0?` +
+      `file=${encodeURIComponent(modelUrl)}` +
+      `&mode=ar_preferred` +
+      `&title=${title}` +
+      `&resizable=true` +
+      `#Intent;` +
+      `scheme=https;` +
+      `package=com.google.android.googlequicksearchbox;` +
+      `action=android.intent.action.VIEW;` +
+      `end;`
+    );
+  }, [modelUrl, platform.isAndroid, product]);
+
   // Listen for model load and AR status
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -141,7 +161,6 @@ export const ARView: React.FC = () => {
         setShowPlaced(true);
         setTimeout(() => setShowPlaced(false), 2000);
       }
-      // Do NOT show error modal on 'failed' here — let launchAR() handle fallbacks
     };
 
     viewer.addEventListener('load', handleLoad);
@@ -177,22 +196,19 @@ export const ARView: React.FC = () => {
   useEffect(() => {
     if (!autoLaunch || !product || loading || launchingAR) return;
     if (arStatus !== 'not-presenting') return;
-    if (platform.isIOS) return; // iOS can't auto-launch
+    if (platform.isIOS) return; 
+
+    // If we have an intent URL and we are on Android, use it for auto-launch
+    // because WebXR requires a user gesture.
     if (platform.isAndroid && intentUrl) {
-      // Auto-launch must bypass WebXR — it requires a user gesture.
-      // Direct navigation is more reliable than a hidden iframe.
       setLaunchingAR(true);
-      const t = setTimeout(() => setLaunchingAR(false), 1000);
+      const t = setTimeout(() => {
+        setLaunchingAR(false);
+      }, 2000);
       window.location.href = intentUrl;
       return () => clearTimeout(t);
     }
-
-    const timer = setTimeout(() => {
-      launchAR();
-    }, 1200);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoLaunch, product, loading, arStatus]);
+  }, [autoLaunch, product, loading, arStatus, intentUrl]);
 
   const handleBack = () => {
     if (product) navigate(`/product/${product._id}`);
@@ -208,11 +224,10 @@ export const ARView: React.FC = () => {
     if (launchingAR) return;
     setLaunchingAR(true);
 
-    // Safety net: if nothing resolves after 6s, the button was probably blocked / hung
     const safetyTimeout = setTimeout(() => {
       setLaunchingAR(false);
       setArError('AR launch timed out. Try Chrome if you are on a privacy browser like Brave.');
-    }, 6000);
+    }, 8000);
 
     const clearSafety = () => clearTimeout(safetyTimeout);
 
@@ -247,19 +262,6 @@ export const ARView: React.FC = () => {
         return;
       }
 
-      if (typeof window !== 'undefined' && !window.isSecureContext) {
-        setArError('AR requires a secure HTTPS connection. Please check your URL starts with https://.');
-        clearSafety();
-        return;
-      }
-
-      const modelUrl = resolveAssetUrl(product?.arModelUrl);
-      if (!modelUrl) {
-        setArError('No AR model available for this product.');
-        clearSafety();
-        return;
-      }
-
       // Try WebXR first for true in-browser AR (Pokemon Go style)
       let webxrWorked = false;
       try {
@@ -267,11 +269,16 @@ export const ARView: React.FC = () => {
         if (typeof navigator !== 'undefined' && (navigator as any).xr?.isSessionSupported) {
           webxrSupported = await Promise.race([
             (navigator as any).xr.isSessionSupported('immersive-ar'),
-            new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000))
+            new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
           ]);
         }
 
-        if (webxrSupported && typeof viewer.activateAR === 'function') {
+        // WebXR requires HTTPS (Secure Context)
+        const isSecure = typeof window !== 'undefined' && window.isSecureContext;
+
+        if (webxrSupported && isSecure && typeof viewer.activateAR === 'function') {
+          // Add a small delay to ensure the gesture is processed
+          await new Promise(resolve => setTimeout(resolve, 100));
           await Promise.race([
             viewer.activateAR(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
@@ -279,8 +286,8 @@ export const ARView: React.FC = () => {
           webxrWorked = true;
           setArError(null);
         }
-      } catch {
-        // WebXR not available or timed out — fall through to Scene Viewer
+      } catch (e) {
+        console.warn('WebXR attempt failed, falling back to Scene Viewer:', e);
       }
 
       if (webxrWorked) {
@@ -289,24 +296,15 @@ export const ARView: React.FC = () => {
         return;
       }
 
-      // Scene Viewer fallback via direct navigation (avoids blank-screen iframe issues)
-      const title = encodeURIComponent(product?.name || 'Furniture');
-      const fallbackIntentUrl =
-        `intent://arvr.google.com/scene-viewer/1.0?` +
-        `file=${encodeURIComponent(modelUrl)}` +
-        `&mode=ar_preferred` +
-        `&title=${title}` +
-        `&resizable=true` +
-        `#Intent;` +
-        `scheme=https;` +
-        `package=com.google.android.googlequicksearchbox;` +
-        `action=android.intent.action.VIEW;` +
-        `end;`;
-
-      // Clear state immediately before leaving the page
-      setLaunchingAR(false);
-      clearSafety();
-      window.location.href = fallbackIntentUrl;
+      // Scene Viewer fallback
+      if (intentUrl) {
+        setLaunchingAR(false);
+        clearSafety();
+        window.location.href = intentUrl;
+      } else {
+        setArError('No AR model available for this product.');
+        clearSafety();
+      }
     } catch (e: any) {
       console.error('Unexpected AR launch error:', e);
       setArError(`Unexpected error: ${e?.message || 'Unknown'}`);
@@ -342,27 +340,6 @@ export const ARView: React.FC = () => {
   const maxAvailable = selectedVariant?.stock ?? product.stock;
   const inAR = arStatus === 'session-started' || arStatus === 'object-placed';
 
-  // Pre-compute Scene Viewer intent URL for Android
-  const modelUrl = resolveAssetUrl(product.arModelUrl);
-  const intentUrl = React.useMemo(() => {
-    if (!modelUrl || !platform.isAndroid) return '';
-    const title = encodeURIComponent(product.name || 'Furniture');
-    // NOTE: do NOT include S.browser_fallback_url — it causes blank-screen issues
-    // when the intent is handled by the browser before the app opens.
-    return (
-      `intent://arvr.google.com/scene-viewer/1.0?` +
-      `file=${encodeURIComponent(modelUrl)}` +
-      `&mode=ar_preferred` +
-      `&title=${title}` +
-      `&resizable=true` +
-      `#Intent;` +
-      `scheme=https;` +
-      `package=com.google.android.googlequicksearchbox;` +
-      `action=android.intent.action.VIEW;` +
-      `end;`
-    );
-  }, [modelUrl, platform.isAndroid, product.name]);
-
   const ModelViewer = 'model-viewer' as any;
 
   return (
@@ -390,13 +367,13 @@ export const ARView: React.FC = () => {
           max-camera-orbit="auto auto 150%"
           interaction-prompt="auto"
           className="w-full h-full"
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
         >
           {/* Poster slot — shown while 3D model loads to prevent blank screen */}
-          <div slot="poster" className="w-full h-full flex items-center justify-center bg-slate-100">
+          <div slot="poster" className="w-full h-full flex items-center justify-center bg-black">
             <div className="text-center">
               <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-sm text-slate-500 font-bold">Loading 3D model...</p>
+              <p className="text-sm text-slate-400 font-bold">Loading 3D model...</p>
             </div>
           </div>
 

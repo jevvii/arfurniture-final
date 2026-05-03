@@ -11,24 +11,33 @@ export const getApiBaseUrl = (): string => {
   const isLocalhost = typeof window !== 'undefined' && 
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
   
+  // Detect LAN IP (e.g., 192.168.x.x, 10.x.x.x)
+  const isLanIp = typeof window !== 'undefined' && 
+    /^(\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname) &&
+    !window.location.hostname.startsWith('127.');
+
   // Use the env variable if it's valid AND it's not a localhost fallback being forced on production
   if (envBase !== undefined && envBase !== 'undefined' && envBase !== '') {
     const sanitizedBase = envBase.replace(/\/$/, '');
     
     // If we have a localhost env var but we are on a real domain, ignore it and use relative paths
-    if (!isLocalhost && sanitizedBase.includes('localhost')) {
+    if (!isLocalhost && !isLanIp && sanitizedBase.includes('localhost')) {
       return '';
     }
     
     return sanitizedBase;
   }
   
+  // In local development or LAN testing, default to port 4000 on the current host
+  if (typeof window !== 'undefined' && (isLocalhost || isLanIp)) {
+    return `${window.location.protocol}//${window.location.hostname}:4000`;
+  }
+  
   // If no valid env var, and we are on a real domain, default to relative paths
-  if (!isLocalhost && typeof window !== 'undefined') {
+  if (typeof window !== 'undefined') {
     return '';
   }
   
-  // In local development, default to localhost:4000
   return 'http://localhost:4000';
 };
 
