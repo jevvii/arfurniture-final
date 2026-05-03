@@ -163,9 +163,31 @@ export const ARView: React.FC = () => {
 
   // Auto-launch on Android when coming from QR scan
   useEffect(() => {
-    if (!autoLaunch || !product || loading || launchingAR) return;
+    if (!autoLaunch || !product || loading) return;
     if (arStatus !== 'not-presenting') return;
     if (platform.isIOS) return; // iOS can't auto-launch
+    if (platform.isAndroid) {
+      // Android: navigate directly to Scene Viewer intent (avoids JS hanging)
+      const modelUrl = resolveAssetUrl(product.arModelUrl);
+      if (modelUrl) {
+        const title = encodeURIComponent(product.name || 'Furniture');
+        const fallbackUrl = encodeURIComponent(window.location.href);
+        const intentUrl =
+          `intent://arvr.google.com/scene-viewer/1.0?` +
+          `file=${encodeURIComponent(modelUrl)}` +
+          `&mode=ar_preferred` +
+          `&title=${title}` +
+          `&resizable=true` +
+          `#Intent;` +
+          `scheme=https;` +
+          `package=com.google.android.googlequicksearchbox;` +
+          `action=android.intent.action.VIEW;` +
+          `S.browser_fallback_url=${fallbackUrl};` +
+          `end;`;
+        window.location.href = intentUrl;
+      }
+      return;
+    }
 
     const timer = setTimeout(() => {
       launchAR();
@@ -329,6 +351,27 @@ export const ARView: React.FC = () => {
   const maxAvailable = selectedVariant?.stock ?? product.stock;
   const inAR = arStatus === 'session-started' || arStatus === 'object-placed';
 
+  // Pre-compute Scene Viewer intent URL for Android (guaranteed non-blocking)
+  const modelUrl = resolveAssetUrl(product.arModelUrl);
+  const intentUrl = React.useMemo(() => {
+    if (!modelUrl || !platform.isAndroid) return '';
+    const title = encodeURIComponent(product.name || 'Furniture');
+    const fallbackUrl = encodeURIComponent(window.location.href);
+    return (
+      `intent://arvr.google.com/scene-viewer/1.0?` +
+      `file=${encodeURIComponent(modelUrl)}` +
+      `&mode=ar_preferred` +
+      `&title=${title}` +
+      `&resizable=true` +
+      `#Intent;` +
+      `scheme=https;` +
+      `package=com.google.android.googlequicksearchbox;` +
+      `action=android.intent.action.VIEW;` +
+      `S.browser_fallback_url=${fallbackUrl};` +
+      `end;`
+    );
+  }, [modelUrl, platform.isAndroid, product.name]);
+
   const ModelViewer = 'model-viewer' as any;
 
   return (
@@ -460,23 +503,13 @@ export const ARView: React.FC = () => {
               Tap below to start AR. Point your camera at the floor and move slowly.
             </p>
 
-            <button
-              disabled={launchingAR}
-              onClick={(e) => {
-                e.currentTarget.blur();
-                launchAR();
-              }}
-              className={`bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 transition-all flex items-center gap-3 mx-auto border border-indigo-400/30 ${
-                launchingAR ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
-              }`}
+            <a
+              href={intentUrl}
+              className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 hover:bg-indigo-500 active:scale-95 transition-all flex items-center gap-3 mx-auto border border-indigo-400/30 no-underline"
             >
-              {launchingAR ? (
-                <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <Box className="w-6 h-6" />
-              )}
-              {launchingAR ? 'Launching...' : 'View in AR'}
-            </button>
+              <Box className="w-6 h-6" />
+              View in AR
+            </a>
           </div>
         </div>
       )}
@@ -578,6 +611,14 @@ export const ARView: React.FC = () => {
                   <RotateCcw className="w-4 h-4" />
                   Reset Placement
                 </button>
+              ) : platform.isAndroid && intentUrl ? (
+                <a
+                  href={intentUrl}
+                  className="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-indigo-500 active:scale-95 transition-all flex items-center justify-center gap-2 border border-indigo-400/30 no-underline"
+                >
+                  <Box className="w-4 h-4" />
+                  View in AR
+                </a>
               ) : (
                 <button
                   disabled={launchingAR}
