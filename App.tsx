@@ -4,6 +4,7 @@ import { Layout } from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import { Shop } from './pages/Customer/Shop';
 import { ProductDetail } from './pages/Customer/ProductDetail';
+import { ARView } from './pages/Customer/ARView';
 import { Cart } from './pages/Customer/Cart';
 import { About } from './pages/Customer/About';
 import { Profile } from './pages/Customer/Profile';
@@ -47,6 +48,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/" element={<Shop />} />
             <Route path="/about" element={<About />} />
             <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/ar/:id" element={<ARView />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/profile" element={
               user ? <Profile /> : <Navigate to="/" replace />
