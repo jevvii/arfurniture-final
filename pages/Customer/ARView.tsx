@@ -44,6 +44,11 @@ export const ARView: React.FC = () => {
   const [diagnostics, setDiagnostics] = useState<Record<string, string>>({});
   const [launchingAR, setLaunchingAR] = useState(false);
 
+  // Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunks = useRef<Blob[]>([]);
+
   const viewerRef = useRef<any>(null);
   const arButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -97,6 +102,50 @@ export const ARView: React.FC = () => {
     });
   };
 
+  // Recording Toggle Logic
+  const toggleRecording = () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      // Access the internal canvas of model-viewer for recording
+      const canvas = viewerRef.current?.shadowRoot?.querySelector('canvas');
+      if (!canvas) {
+        setArError('Recording is only available in the integrated browser mode (WebXR).');
+        return;
+      }
+
+      try {
+        recordedChunks.current = [];
+        const stream = canvas.captureStream(30);
+        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8' });
+        
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) recordedChunks.current.push(e.data);
+        };
+
+        recorder.onstop = () => {
+          const blob = new Blob(recordedChunks.current, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `ar-capture-${product?.name}-${Date.now()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        };
+
+        recorder.start();
+        mediaRecorderRef.current = recorder;
+        setIsRecording(true);
+      } catch (err) {
+        console.error('Failed to start recording:', err);
+        setArError('Failed to start video recording.');
+      }
+    }
+  };
+
   // Gather diagnostics whenever relevant state changes
   const updateDiagnostics = async () => {
     const viewer = viewerRef.current;
@@ -127,7 +176,6 @@ export const ARView: React.FC = () => {
   };
 
   // Pre-compute Scene Viewer intent URL for Android
-  // Moved up to ensure it's available for effects
   const modelUrl = resolveAssetUrl(product?.arModelUrl);
   const intentUrl = React.useMemo(() => {
     if (!modelUrl || !platform.isAndroid || !product) return '';
@@ -185,7 +233,10 @@ export const ARView: React.FC = () => {
     viewer.addEventListener('error', handleError);
     viewer.addEventListener('ar-status', handleArStatus);
 
-    if (viewer.model) setModelLoaded(true);
+    if (viewer.model) {
+       setModelLoaded(true);
+       applyColor();
+    }
     updateDiagnostics();
 
     return () => {
@@ -196,6 +247,7 @@ export const ARView: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, selectedVariant]);
 
+  // Ensure color stays synced during AR session
   useEffect(() => {
     applyColor();
   }, [selectedVariant, product]);
@@ -213,12 +265,10 @@ export const ARView: React.FC = () => {
 
   // Auto-launch on Android when coming from QR scan
   useEffect(() => {
-    // Only auto-launch once the product is fetched, the model is fully loaded, and we aren't already launching
     if (!autoLaunch || !product || loading || !modelLoaded || launchingAR) return;
     if (arStatus !== 'not-presenting') return;
     if (platform.isIOS) return; 
 
-    // Auto-launch now that we are CERTAIN the model is ready
     const timer = setTimeout(() => {
       launchAR();
     }, 500); 
@@ -230,10 +280,6 @@ export const ARView: React.FC = () => {
     else navigate('/');
   };
 
-  /**
-   * Launch AR.
-   * Leverages model-viewer's internal logic for robust cross-platform fallbacks.
-   */
   const launchAR = async () => {
     if (launchingAR) return;
     setLaunchingAR(true);
@@ -261,19 +307,15 @@ export const ARView: React.FC = () => {
         return;
       }
 
-      // Android / Other path
-      // IMPORTANT: We wait for modelLoaded state instead of checking viewer.model directly
       if (!modelLoaded) {
         throw new Error('3D model is still downloading. Please wait for the spinner to disappear.');
       }
 
-      // Check if browser context is secure (required for WebXR)
       const isSecure = typeof window !== 'undefined' && window.isSecureContext;
       if (!isSecure) {
         console.warn('Insecure context detected. WebXR will be disabled, falling back to Scene Viewer.');
       }
 
-      // Activate AR using model-viewer's built-in priority logic
       if (typeof viewer.activateAR === 'function') {
         await viewer.activateAR();
       } else {
@@ -328,16 +370,16 @@ export const ARView: React.FC = () => {
           src={resolveAssetUrl(product.arModelUrl)}
           poster={resolveAssetUrl(product.imageUrl)}
           alt={`AR view of ${product.name}`}
-          shadow-intensity="1.5"
-          shadow-softness="1"
+          shadow-intensity="2"
+          shadow-softness="0.5"
           camera-controls
           auto-rotate={!inAR}
           ar
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
-          ar-scale="auto"
+          ar-scale="fixed"
           environment-image="neutral"
-          exposure="1"
+          exposure="1.2"
           loading="eager"
           reveal="auto"
           camera-orbit="0deg 75deg 105%"
@@ -347,7 +389,7 @@ export const ARView: React.FC = () => {
           className="w-full h-full"
           style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
         >
-          {/* Poster slot — shown while 3D model loads to prevent blank screen */}
+          {/* Poster slot */}
           <div slot="poster" className="w-full h-full flex items-center justify-center bg-black">
             <div className="text-center">
               <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -355,12 +397,6 @@ export const ARView: React.FC = () => {
             </div>
           </div>
 
-          {/*
-            slot="ar-button" — model-viewer requires this element to exist in the DOM
-            for AR discovery even when we call activateAR() programmatically.
-            On iOS it is visible and clickable (AR Quick Look requirement).
-            On Android/Desktop it is invisible but still present in the DOM.
-          */}
           <button
             ref={arButtonRef}
             slot="ar-button"
@@ -375,6 +411,19 @@ export const ARView: React.FC = () => {
           </button>
         </ModelViewer>
       </div>
+
+      {/* --- WebXR Record Toggle (Shows only during AR session) --- */}
+      {inAR && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+           <button
+             onClick={toggleRecording}
+             className={`pointer-events-auto px-6 py-3 rounded-full font-bold text-white shadow-xl transition-all flex items-center gap-2 ${isRecording ? 'bg-rose-600 animate-pulse' : 'bg-black/40 backdrop-blur-md border border-white/20 hover:bg-black/60'}`}
+           >
+             <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-white' : 'bg-rose-600'}`} />
+             {isRecording ? 'Stop Recording' : 'Record View'}
+           </button>
+        </div>
+      )}
 
       {/* --- Top Overlay Bar --- */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 pointer-events-none">
