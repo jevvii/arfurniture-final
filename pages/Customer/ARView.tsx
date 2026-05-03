@@ -140,14 +140,7 @@ export const ARView: React.FC = () => {
         setShowPlaced(true);
         setTimeout(() => setShowPlaced(false), 2000);
       }
-      if (status === 'failed') {
-        const isBrave = typeof (navigator as any).brave?.isBrave === 'function';
-        setArError(
-          isBrave
-            ? 'Brave blocks AR features. Please open this page in Chrome (not Brave) for the best AR experience.'
-            : 'AR session failed. Try Chrome on Android with ARCore installed, or ensure your browser supports WebXR.'
-        );
-      }
+      // Do NOT show error modal on 'failed' here — let launchAR() handle fallbacks
     };
 
     viewer.addEventListener('load', handleLoad);
@@ -242,30 +235,22 @@ export const ARView: React.FC = () => {
     }
 
     if (webxrSupported && typeof viewer.activateAR === 'function') {
-      // Native WebXR path (in-browser camera passthrough — the true Pokemon Go style)
+      // Native WebXR path (in-browser camera passthrough)
       try {
         await viewer.activateAR();
         setArError(null);
+        await updateDiagnostics();
+        return; // Success — done
       } catch (e: any) {
-        console.error('AR activation failed:', e);
-        const msg = e?.message || String(e);
-        if (msg.includes('Permission') || msg.includes('permission')) {
-          setArError('Camera permission denied. Please allow camera access in your browser settings.');
-        } else {
-          setArError(`AR failed: ${msg}`);
-        }
+        console.warn('WebXR activateAR failed, will try Scene Viewer fallback:', e);
+        // Do NOT show error yet — fall through to Scene Viewer intent below
       }
-      await updateDiagnostics();
-      return;
     }
 
-    // Fallback: direct Scene Viewer intent (opens Google app with camera)
-    // This bypasses model-viewer when WebXR is unavailable (e.g. Brave browser)
-    const isBrave = typeof (navigator as any).brave?.isBrave === 'function';
+    // Scene Viewer intent fallback (works on most Android browsers even without WebXR)
     const title = encodeURIComponent(product?.name || 'Furniture');
     const fallbackUrl = encodeURIComponent(window.location.href);
 
-    // Scene Viewer intent URL
     const intentUrl =
       `intent://arvr.google.com/scene-viewer/1.0?` +
       `file=${encodeURIComponent(modelUrl)}` +
@@ -279,26 +264,15 @@ export const ARView: React.FC = () => {
       `S.browser_fallback_url=${fallbackUrl};` +
       `end;`;
 
-    // Quick Look for iOS fallback (shouldn't reach here, but safe to include)
-    const usdzUrl = modelUrl.replace(/\.glb$/i, '.usdz');
-
-    if (isBrave) {
-      // Brave blocks intents; show specific guidance
-      setArError(
-        'Brave browser blocks AR. Please copy this link and open it in Chrome, or use the QR code with your phone\'s camera app.'
-      );
-      return;
-    }
-
-    // Attempt Scene Viewer intent
+    // Navigate to intent — this opens Google Scene Viewer app or Quick Search box
     window.location.href = intentUrl;
 
-    // If we're still here after a short delay, the intent may have failed
+    // If still here after a delay, Scene Viewer probably didn't open
     setTimeout(() => {
       setArError(
-        'Could not open Scene Viewer. Make sure Google app / ARCore is installed. Try Chrome instead of Brave or other privacy browsers.'
+        'Could not open AR. Make sure Google app / ARCore is installed, and try Chrome if you\'re on a privacy browser like Brave.'
       );
-    }, 1500);
+    }, 2000);
 
     await updateDiagnostics();
   };
