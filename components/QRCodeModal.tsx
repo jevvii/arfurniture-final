@@ -13,7 +13,7 @@ export const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, produ
 
   const baseUrl = `${window.location.protocol}//${window.location.host}`;
   const productUrl = productId
-    ? `${baseUrl}/ar/${productId}`
+    ? `${baseUrl}/ar/${productId}?autolaunch=1`
     : window.location.href;
   
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(productUrl)}`;

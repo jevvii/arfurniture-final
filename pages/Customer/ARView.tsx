@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, ShoppingCart, Box, Crosshair, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
@@ -19,7 +19,10 @@ function hexToRgba(hex: string): [number, number, number, number] {
 export const ARView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { addToCart } = useCart();
+
+  const autoLaunch = searchParams.get('autolaunch') === '1';
 
   const [product, setProduct] = useState<Product | undefined>();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
@@ -111,6 +114,20 @@ export const ARView: React.FC = () => {
   useEffect(() => {
     applyColor();
   }, [selectedVariant, product]);
+
+  // Auto-launch AR when coming from QR scan (autolaunch=1)
+  useEffect(() => {
+    if (!autoLaunch || !product || loading) return;
+    if (arStatus !== 'not-presenting') return;
+
+    // Give model-viewer time to mount and load before activating AR
+    const timer = setTimeout(() => {
+      launchAR();
+    }, 1200);
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLaunch, product, loading, arStatus]);
 
   const handleBack = () => {
     if (product) navigate(`/product/${product._id}`);
