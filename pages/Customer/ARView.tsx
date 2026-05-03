@@ -1,6 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, Box, Crosshair, RotateCcw, AlertTriangle } from 'lucide-react';
+import {
+  ArrowLeft,
+  ShoppingCart,
+  Box,
+  Crosshair,
+  RotateCcw,
+  AlertTriangle,
+} from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
 import { useCart } from '../../contexts/CartContext';
@@ -30,9 +37,16 @@ export const ARView: React.FC = () => {
   const [arStatus, setArStatus] = useState<'not-presenting' | 'session-started' | 'object-placed'>('not-presenting');
   const [arError, setArError] = useState<string | null>(null);
   const [showPlaced, setShowPlaced] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
 
   const viewerRef = useRef<any>(null);
+  const arButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Stable platform detection
+  const platform = useRef({
+    isIOS: /iPhone|iPad|iPod/i.test(navigator.userAgent),
+    isAndroid: /Android/i.test(navigator.userAgent),
+    isDesktop: !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent),
+  }).current;
 
   useEffect(() => {
     if (!id) return;
@@ -44,13 +58,7 @@ export const ARView: React.FC = () => {
     load();
   }, [id]);
 
-  // Detect desktop vs mobile for AR capability messaging
-  useEffect(() => {
-    const check = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    setIsDesktop(!check);
-  }, []);
-
-  // Prevent body scroll when AR view is open
+  // Prevent body scroll
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -58,7 +66,7 @@ export const ARView: React.FC = () => {
     };
   }, []);
 
-  // Apply color to 3D model materials whenever color or model changes
+  // Apply color to 3D model materials
   const applyColor = () => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -83,7 +91,7 @@ export const ARView: React.FC = () => {
     });
   };
 
-  // Listen for model load and AR status events
+  // Listen for model load and AR status
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
@@ -101,7 +109,6 @@ export const ARView: React.FC = () => {
     viewer.addEventListener('load', handleLoad);
     viewer.addEventListener('ar-status', handleArStatus);
 
-    // If model already loaded (e.g. cached), apply immediately
     if (viewer.model) applyColor();
 
     return () => {
@@ -110,23 +117,21 @@ export const ARView: React.FC = () => {
     };
   }, [product, selectedVariant]);
 
-  // Re-apply color when variant changes
   useEffect(() => {
     applyColor();
   }, [selectedVariant, product]);
 
-  // Auto-launch AR when coming from QR scan (autolaunch=1)
+  // Auto-launch on Android when coming from QR scan
   useEffect(() => {
     if (!autoLaunch || !product || loading) return;
     if (arStatus !== 'not-presenting') return;
+    if (platform.isIOS) return; // iOS can't auto-launch
 
-    // Give model-viewer time to mount and load before activating AR
     const timer = setTimeout(() => {
       launchAR();
     }, 1200);
-
     return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoLaunch, product, loading, arStatus]);
 
   const handleBack = () => {
@@ -134,18 +139,29 @@ export const ARView: React.FC = () => {
     else navigate('/');
   };
 
+  /**
+   * Launch AR.
+   * - iOS Safari: click the native slot="ar-button" (AR Quick Look)
+   * - Android Chrome: activateAR() → scene-viewer / webxr
+   */
   const launchAR = async () => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    // On desktop, AR via WebXR is unsupported — show a helpful message
-    if (isDesktop) {
+    if (platform.isDesktop) {
       setArError('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
       return;
     }
 
+    if (platform.isIOS) {
+      if (arButtonRef.current) {
+        arButtonRef.current.click();
+      }
+      return;
+    }
+
     if (!viewer.activateAR) {
-      setArError('Your browser does not support WebXR AR. Try Chrome on Android or Safari on iOS.');
+      setArError('Your browser does not support AR. Try Chrome on Android.');
       return;
     }
 
@@ -154,7 +170,7 @@ export const ARView: React.FC = () => {
       setArError(null);
     } catch (e: any) {
       console.error('AR activation failed:', e);
-      setArError(e?.message || 'Could not start AR. Make sure you are on HTTPS and camera permissions are allowed.');
+      setArError(e?.message || 'Could not start AR. Ensure HTTPS and camera permissions.');
     }
   };
 
@@ -186,7 +202,6 @@ export const ARView: React.FC = () => {
   const maxAvailable = selectedVariant?.stock ?? product.stock;
   const inAR = arStatus === 'session-started' || arStatus === 'object-placed';
 
-  // Cast to bypass TS intrinsic check for custom web component
   const ModelViewer = 'model-viewer' as any;
 
   return (
@@ -200,9 +215,9 @@ export const ARView: React.FC = () => {
           shadow-intensity="1.5"
           shadow-softness="1"
           camera-controls
-          auto-rotate={!inAR} // Stop auto-rotate when in AR so user can place manually
+          auto-rotate={!inAR}
           ar
-          ar-modes="webxr scene-viewer quick-look"
+          ar-modes="scene-viewer webxr quick-look"
           ar-placement="floor"
           ar-scale="fixed"
           exposure="1"
@@ -215,8 +230,23 @@ export const ARView: React.FC = () => {
           className="w-full h-full"
           style={{ width: '100%', height: '100%' }}
         >
-          {/* Native AR slot button hidden — we trigger programmatically */}
-          <button slot="ar-button" style={{ display: 'none' }} />
+          {/*
+            slot="ar-button" — on iOS this MUST be the element the user taps.
+            We position it in the center of the screen so it covers our prompt area.
+            On Android / Desktop it stays hidden.
+          */}
+          <button
+            ref={arButtonRef}
+            slot="ar-button"
+            className={
+              platform.isIOS
+                ? 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[40%] z-50 bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 hover:bg-indigo-500 active:scale-95 transition-all flex items-center gap-3 border border-indigo-400/30 cursor-pointer'
+                : 'hidden'
+            }
+          >
+            <Box className="w-6 h-6" />
+            View in AR
+          </button>
         </ModelViewer>
       </div>
 
@@ -261,7 +291,7 @@ export const ARView: React.FC = () => {
               >
                 Dismiss
               </button>
-              {isDesktop && (
+              {platform.isDesktop && (
                 <Link
                   to={`/product/${product._id}`}
                   className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 transition-all flex items-center justify-center"
@@ -274,11 +304,10 @@ export const ARView: React.FC = () => {
         </div>
       )}
 
-      {/* --- Center "Launch AR" Prompt (Pre-AR State) --- */}
-      {!inAR && !arError && (
+      {/* --- Center "Launch AR" Prompt --- */}
+      {!inAR && !arError && !platform.isIOS && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div className="text-center pointer-events-auto">
-            {/* Floor reticle animation */}
             <div className="relative w-24 h-24 mx-auto mb-6">
               <div className="absolute inset-0 border-2 border-dashed border-white/40 rounded-full animate-[spin_8s_linear_infinite]" />
               <div className="absolute inset-3 border border-white/20 rounded-full" />
@@ -300,7 +329,24 @@ export const ARView: React.FC = () => {
         </div>
       )}
 
-      {/* --- Bottom Product Overlay Sheet (Pokemon Go-style) --- */}
+      {/* iOS center prompt text (button is the native slot above) */}
+      {!inAR && !arError && platform.isIOS && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="text-center pointer-events-none">
+            <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="absolute inset-0 border-2 border-dashed border-white/40 rounded-full animate-[spin_8s_linear_infinite]" />
+              <div className="absolute inset-3 border border-white/20 rounded-full" />
+              <Crosshair className="absolute inset-0 m-auto w-8 h-8 text-white/80" />
+            </div>
+            <h2 className="text-white/90 text-lg font-bold mb-2 drop-shadow-lg">Ready to place in your room</h2>
+            <p className="text-white/50 text-xs font-medium mb-24 max-w-[220px] mx-auto">
+              Tap the button below to start AR. Point your camera at the floor and move slowly.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* --- Bottom Product Overlay Sheet --- */}
       <div className={`absolute bottom-0 left-0 right-0 z-20 transition-transform duration-500 ${inAR ? 'translate-y-0' : ''}`}>
         <div className="bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-16 pb-6 px-5">
           <div className="max-w-md mx-auto">
@@ -324,7 +370,6 @@ export const ARView: React.FC = () => {
             {/* Variant Swatches */}
             {product.variants && product.variants.length > 0 && (
               <div className="flex items-center gap-2.5 mb-5 overflow-x-auto pb-1 scrollbar-none">
-                {/* Base */}
                 <button
                   onClick={() => setSelectedVariant(undefined)}
                   className={`relative w-9 h-9 rounded-full border-2 transition-all shrink-0 ${!selectedVariant ? 'border-indigo-400 scale-110' : 'border-white/20 hover:border-white/50'}`}
@@ -392,10 +437,9 @@ export const ARView: React.FC = () => {
               )}
             </div>
 
-            {/* In-AR helper hint */}
             {inAR && (
               <p className="text-center text-white/30 text-[10px] font-medium mt-3 uppercase tracking-widest">
-                Drag to move &middot; Pinch to resize &middot; Two-finger rotate
+                Drag to move · Pinch to resize · Two-finger rotate
               </p>
             )}
           </div>
