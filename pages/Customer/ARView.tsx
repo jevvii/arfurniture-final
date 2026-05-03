@@ -335,7 +335,8 @@ export const ARView: React.FC = () => {
           ar
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
-          ar-scale="fixed"
+          ar-scale="auto"
+          environment-image="neutral"
           exposure="1"
           loading="eager"
           reveal="auto"
