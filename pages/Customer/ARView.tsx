@@ -35,6 +35,8 @@ export const ARView: React.FC = () => {
   const [product, setProduct] = useState<Product | undefined>();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
   const [arStatus, setArStatus] = useState<'not-presenting' | 'session-started' | 'object-placed' | 'failed'>('not-presenting');
   const [arError, setArError] = useState<string | null>(null);
   const [showPlaced, setShowPlaced] = useState(false);
@@ -115,7 +117,7 @@ export const ARView: React.FC = () => {
       secureContext: typeof window !== 'undefined' && window.isSecureContext ? 'yes' : 'no',
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 60) : 'n/a',
       modelUrl: product?.arModelUrl ? resolveAssetUrl(product.arModelUrl) : 'none',
-      modelLoaded: viewer?.model ? 'yes' : 'no',
+      modelLoaded: modelLoaded ? 'yes' : 'no',
       viewerReady: viewer ? 'yes' : 'no',
       activateARExists: typeof viewer?.activateAR === 'function' ? 'yes' : 'no',
       webxrSupport,
@@ -150,9 +152,19 @@ export const ARView: React.FC = () => {
     if (!viewer) return;
 
     const handleLoad = () => {
+      setModelLoaded(true);
+      setModelError(null);
       applyColor();
       updateDiagnostics();
     };
+
+    const handleError = (e: any) => {
+      console.error('Model Viewer error:', e);
+      setModelError('Failed to load 3D model. Please check your connection or the file path.');
+      setModelLoaded(false);
+      updateDiagnostics();
+    };
+
     const handleArStatus = (e: any) => {
       const status = e.detail?.status || 'not-presenting';
       setArStatus(status);
@@ -170,13 +182,15 @@ export const ARView: React.FC = () => {
     };
 
     viewer.addEventListener('load', handleLoad);
+    viewer.addEventListener('error', handleError);
     viewer.addEventListener('ar-status', handleArStatus);
 
-    if (viewer.model) applyColor();
+    if (viewer.model) setModelLoaded(true);
     updateDiagnostics();
 
     return () => {
       viewer.removeEventListener('load', handleLoad);
+      viewer.removeEventListener('error', handleError);
       viewer.removeEventListener('ar-status', handleArStatus);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,16 +213,17 @@ export const ARView: React.FC = () => {
 
   // Auto-launch on Android when coming from QR scan
   useEffect(() => {
-    if (!autoLaunch || !product || loading || launchingAR) return;
+    // Only auto-launch once the product is fetched, the model is fully loaded, and we aren't already launching
+    if (!autoLaunch || !product || loading || !modelLoaded || launchingAR) return;
     if (arStatus !== 'not-presenting') return;
     if (platform.isIOS) return; 
 
-    // Auto-launch must use a small delay to ensure everything is ready
+    // Auto-launch now that we are CERTAIN the model is ready
     const timer = setTimeout(() => {
       launchAR();
-    }, 1500);
+    }, 500); 
     return () => clearTimeout(timer);
-  }, [autoLaunch, product, loading, arStatus]);
+  }, [autoLaunch, product, loading, modelLoaded, arStatus]);
 
   const handleBack = () => {
     if (product) navigate(`/product/${product._id}`);
@@ -217,10 +232,7 @@ export const ARView: React.FC = () => {
 
   /**
    * Launch AR.
-   * Leverages model-viewer's internal logic for robust cross-platform fallbacks:
-   * 1. WebXR (Integrated "Pokemon Go style" AR)
-   * 2. Scene Viewer (Android System App)
-   * 3. Quick Look (iOS)
+   * Leverages model-viewer's internal logic for robust cross-platform fallbacks.
    */
   const launchAR = async () => {
     if (launchingAR) return;
@@ -250,8 +262,9 @@ export const ARView: React.FC = () => {
       }
 
       // Android / Other path
-      if (!viewer.model) {
-        throw new Error('3D model is still loading. Please wait a moment.');
+      // IMPORTANT: We wait for modelLoaded state instead of checking viewer.model directly
+      if (!modelLoaded) {
+        throw new Error('3D model is still downloading. Please wait for the spinner to disappear.');
       }
 
       // Check if browser context is secure (required for WebXR)
@@ -263,7 +276,6 @@ export const ARView: React.FC = () => {
       // Activate AR using model-viewer's built-in priority logic
       if (typeof viewer.activateAR === 'function') {
         await viewer.activateAR();
-        // We don't set launchingAR to false here immediately as the ar-status event handles the transition
       } else {
         throw new Error('AR activation is not supported by your browser.');
       }
