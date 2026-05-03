@@ -157,6 +157,12 @@ export const ARView: React.FC = () => {
       const status = e.detail?.status || 'not-presenting';
       setArStatus(status);
       updateDiagnostics();
+      
+      if (status === 'failed') {
+        setLaunchingAR(false);
+        setArError('AR failed to start. This usually happens if your device does not support ARCore or if your browser is missing necessary permissions.');
+      }
+
       if (status === 'object-placed') {
         setShowPlaced(true);
         setTimeout(() => setShowPlaced(false), 2000);
@@ -185,7 +191,6 @@ export const ARView: React.FC = () => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         setLaunchingAR(false);
-        setArError(null);
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -198,17 +203,12 @@ export const ARView: React.FC = () => {
     if (arStatus !== 'not-presenting') return;
     if (platform.isIOS) return; 
 
-    // If we have an intent URL and we are on Android, use it for auto-launch
-    // because WebXR requires a user gesture.
-    if (platform.isAndroid && intentUrl) {
-      setLaunchingAR(true);
-      const t = setTimeout(() => {
-        setLaunchingAR(false);
-      }, 2000);
-      window.location.href = intentUrl;
-      return () => clearTimeout(t);
-    }
-  }, [autoLaunch, product, loading, arStatus, intentUrl]);
+    // Auto-launch must use a small delay to ensure everything is ready
+    const timer = setTimeout(() => {
+      launchAR();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [autoLaunch, product, loading, arStatus]);
 
   const handleBack = () => {
     if (product) navigate(`/product/${product._id}`);
@@ -217,98 +217,63 @@ export const ARView: React.FC = () => {
 
   /**
    * Launch AR.
-   * - iOS Safari: click the native slot="ar-button" (AR Quick Look)
-   * - Android: try WebXR with timeout → Scene Viewer intent fallback
+   * Leverages model-viewer's internal logic for robust cross-platform fallbacks:
+   * 1. WebXR (Integrated "Pokemon Go style" AR)
+   * 2. Scene Viewer (Android System App)
+   * 3. Quick Look (iOS)
    */
   const launchAR = async () => {
     if (launchingAR) return;
     setLaunchingAR(true);
+    setArError(null);
 
     const safetyTimeout = setTimeout(() => {
       setLaunchingAR(false);
-      setArError('AR launch timed out. Try Chrome if you are on a privacy browser like Brave.');
-    }, 8000);
-
-    const clearSafety = () => clearTimeout(safetyTimeout);
+    }, 10000);
 
     try {
       const viewer = viewerRef.current;
-      if (!viewer) {
-        setArError('3D viewer not initialized. Please wait for the model to load.');
-        clearSafety();
-        return;
-      }
+      if (!viewer) throw new Error('3D viewer not initialized.');
 
       if (platform.isDesktop) {
-        setArError('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
-        clearSafety();
-        return;
+        throw new Error('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
       }
 
       if (platform.isIOS) {
         if (arButtonRef.current) {
           arButtonRef.current.click();
         } else {
-          setArError('AR button not found. Please refresh the page.');
+          throw new Error('AR button not found.');
         }
-        clearSafety();
+        clearTimeout(safetyTimeout);
         return;
       }
 
-      // Android path
+      // Android / Other path
       if (!viewer.model) {
-        setArError('3D model is still loading. Please wait a moment and try again.');
-        clearSafety();
-        return;
+        throw new Error('3D model is still loading. Please wait a moment.');
       }
 
-      // Try WebXR first for true in-browser AR (Pokemon Go style)
-      let webxrWorked = false;
-      try {
-        let webxrSupported = false;
-        if (typeof navigator !== 'undefined' && (navigator as any).xr?.isSessionSupported) {
-          webxrSupported = await Promise.race([
-            (navigator as any).xr.isSessionSupported('immersive-ar'),
-            new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1500))
-          ]);
-        }
-
-        // WebXR requires HTTPS (Secure Context)
-        const isSecure = typeof window !== 'undefined' && window.isSecureContext;
-
-        if (webxrSupported && isSecure && typeof viewer.activateAR === 'function') {
-          // Add a small delay to ensure the gesture is processed
-          await new Promise(resolve => setTimeout(resolve, 100));
-          await Promise.race([
-            viewer.activateAR(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 6000))
-          ]);
-          webxrWorked = true;
-          setArError(null);
-        }
-      } catch (e) {
-        console.warn('WebXR attempt failed, falling back to Scene Viewer:', e);
+      // Check if browser context is secure (required for WebXR)
+      const isSecure = typeof window !== 'undefined' && window.isSecureContext;
+      if (!isSecure) {
+        console.warn('Insecure context detected. WebXR will be disabled, falling back to Scene Viewer.');
       }
 
-      if (webxrWorked) {
-        setLaunchingAR(false);
-        clearSafety();
-        return;
-      }
-
-      // Scene Viewer fallback
-      if (intentUrl) {
-        setLaunchingAR(false);
-        clearSafety();
-        window.location.href = intentUrl;
+      // Activate AR using model-viewer's built-in priority logic
+      if (typeof viewer.activateAR === 'function') {
+        await viewer.activateAR();
+        // We don't set launchingAR to false here immediately as the ar-status event handles the transition
       } else {
-        setArError('No AR model available for this product.');
-        clearSafety();
+        throw new Error('AR activation is not supported by your browser.');
       }
+
     } catch (e: any) {
-      console.error('Unexpected AR launch error:', e);
-      setArError(`Unexpected error: ${e?.message || 'Unknown'}`);
-      clearSafety();
+      console.error('AR launch error:', e);
+      setArError(e?.message || 'Failed to start AR.');
+      setLaunchingAR(false);
+    } finally {
+      clearTimeout(safetyTimeout);
     }
   };
 
