@@ -8,6 +8,8 @@ import {
   RotateCcw,
   AlertTriangle,
   Bug,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
@@ -43,6 +45,7 @@ export const ARView: React.FC = () => {
   const [showDebug, setShowDebug] = useState(false);
   const [diagnostics, setDiagnostics] = useState<Record<string, string>>({});
   const [launchingAR, setLaunchingAR] = useState(false);
+  const [currentScale, setCurrentScale] = useState(1.0);
 
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -108,7 +111,6 @@ export const ARView: React.FC = () => {
       mediaRecorderRef.current?.stop();
       setIsRecording(false);
     } else {
-      // Access the internal canvas of model-viewer for recording
       const canvas = viewerRef.current?.shadowRoot?.querySelector('canvas');
       if (!canvas) {
         setArError('Recording is only available in the integrated browser mode (WebXR).');
@@ -340,6 +342,10 @@ export const ARView: React.FC = () => {
     setTimeout(() => setShowPlaced(false), 2000);
   };
 
+  const adjustScale = (delta: number) => {
+    setCurrentScale(prev => Math.min(2.0, Math.max(0.2, prev + delta)));
+  };
+
   const handleAddToCart = () => {
     if (!product) return;
     addToCart(product, selectedVariant, 1);
@@ -378,6 +384,7 @@ export const ARView: React.FC = () => {
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           ar-scale="fixed"
+          scale={`${currentScale} ${currentScale} ${currentScale}`}
           environment-image="neutral"
           exposure="1.2"
           loading="eager"
@@ -412,16 +419,32 @@ export const ARView: React.FC = () => {
         </ModelViewer>
       </div>
 
-      {/* --- WebXR Record Toggle (Shows only during AR session) --- */}
+      {/* --- WebXR UI (Record / Snap / Scale) --- */}
       {inAR && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-           <button
-             onClick={toggleRecording}
-             className={`pointer-events-auto px-6 py-3 rounded-full font-bold text-white shadow-xl transition-all flex items-center gap-2 ${isRecording ? 'bg-rose-600 animate-pulse' : 'bg-black/40 backdrop-blur-md border border-white/20 hover:bg-black/60'}`}
-           >
-             <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-white' : 'bg-rose-600'}`} />
-             {isRecording ? 'Stop Recording' : 'Record View'}
-           </button>
+        <div className="absolute top-20 left-4 right-4 z-50 flex flex-col items-center gap-3 pointer-events-none">
+           <div className="flex gap-2 pointer-events-auto">
+             <button
+               onClick={toggleRecording}
+               className={`px-6 py-3 rounded-full font-bold text-white shadow-xl transition-all flex items-center gap-2 ${isRecording ? 'bg-rose-600 animate-pulse' : 'bg-black/40 backdrop-blur-md border border-white/20 hover:bg-black/60'}`}
+             >
+               <div className={`w-3 h-3 rounded-full ${isRecording ? 'bg-white' : 'bg-rose-600'}`} />
+               {isRecording ? 'Stop' : 'Record'}
+             </button>
+
+             <button
+               onClick={handleResetPlacement}
+               className="px-6 py-3 rounded-full font-bold text-white bg-indigo-600/90 backdrop-blur-md border border-indigo-400/30 shadow-xl hover:bg-indigo-500 transition-all flex items-center gap-2"
+             >
+               <RotateCcw className="w-4 h-4" />
+               Snap to Floor
+             </button>
+           </div>
+
+           <div className="pointer-events-auto bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl p-2 flex items-center gap-4">
+              <button onClick={() => adjustScale(-0.05)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white font-bold hover:bg-white/20">-</button>
+              <span className="text-white font-mono text-xs w-12 text-center">{Math.round(currentScale * 100)}%</span>
+              <button onClick={() => adjustScale(0.05)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white font-bold hover:bg-white/20">+</button>
+           </div>
         </div>
       )}
 
@@ -469,17 +492,43 @@ export const ARView: React.FC = () => {
               <AlertTriangle className="w-7 h-7" />
             </div>
             <h2 className="text-white font-bold text-lg mb-2">AR Not Available</h2>
-            <p className="text-slate-400 text-sm mb-6">{arError}</p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setArError(null);
-                  setLaunchingAR(false);
-                }}
-                className="flex-1 bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-700 transition-all border border-slate-700"
-              >
-                Dismiss
-              </button>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              {arError}
+              {platform.isAndroid && (
+                <span className="block mt-3 p-3 bg-white/5 rounded-lg border border-white/10 text-[11px] text-slate-500 text-left">
+                  <strong>Troubleshooting:</strong>
+                  <br />• Ensure you are using <strong>Chrome</strong>.
+                  <br />• Update <strong>Google Play Services for AR</strong>.
+                  <br />• ARCore is required for floor placement.
+                </span>
+              )}
+            </p>
+            <div className="flex flex-col gap-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setArError(null);
+                    setLaunchingAR(false);
+                  }}
+                  className="flex-1 bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-700 transition-all border border-slate-700"
+                >
+                  Dismiss
+                </button>
+                {platform.isAndroid && intentUrl && (
+                  <button
+                    onClick={() => {
+                      setArError(null);
+                      setLaunchingAR(true);
+                      window.location.href = intentUrl;
+                      setTimeout(() => setLaunchingAR(false), 2000);
+                    }}
+                    className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Box className="w-4 h-4" />
+                    Try Fallback
+                  </button>
+                )}
+              </div>
               {platform.isDesktop && (
                 <Link
                   to={`/product/${product._id}`}
@@ -508,18 +557,18 @@ export const ARView: React.FC = () => {
             </p>
 
             <button
-              disabled={launchingAR}
+              disabled={launchingAR || !modelLoaded}
               onClick={launchAR}
               className={`bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 transition-all flex items-center gap-3 mx-auto border border-indigo-400/30 ${
-                launchingAR ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
+                (launchingAR || !modelLoaded) ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
               }`}
             >
-              {launchingAR ? (
+              {(launchingAR || !modelLoaded) ? (
                 <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <Box className="w-6 h-6" />
               )}
-              {launchingAR ? 'Launching...' : 'View in AR'}
+              {!modelLoaded ? 'Loading Model...' : launchingAR ? 'Launching...' : 'View in AR'}
             </button>
           </div>
         </div>
@@ -543,8 +592,8 @@ export const ARView: React.FC = () => {
       )}
 
       {/* --- Bottom Product Overlay Sheet --- */}
-      <div className={`absolute bottom-0 left-0 right-0 z-20 transition-transform duration-500 ${inAR ? 'translate-y-0' : ''}`}>
-        <div className="bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-16 pb-6 px-5">
+      <div className={`absolute bottom-0 left-0 right-0 z-20 transition-all duration-500 ${inAR ? 'translate-y-0' : 'translate-y-4'}`}>
+        <div className="bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-20 pb-8 px-5">
           <div className="max-w-md mx-auto">
             {/* Product Card Row */}
             <div className="flex items-center gap-4 mb-4">
@@ -563,34 +612,40 @@ export const ARView: React.FC = () => {
               </div>
             </div>
 
-            {/* Variant Swatches */}
-            {product.variants && product.variants.length > 0 && (
-              <div className="flex items-center gap-2.5 mb-5 overflow-x-auto pb-1 scrollbar-none">
+            {/* Scale Calibration (Pre-AR) */}
+            {!inAR && (
+              <div className="flex flex-col gap-4 mb-6">
+                 <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest text-center">Calibrate Scale (1:1 Size)</p>
+                 <div className="bg-white/5 rounded-2xl p-3 flex items-center justify-between border border-white/10">
+                    <button onClick={() => adjustScale(-0.1)} className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all"><Minus className="w-5 h-5" /></button>
+                    <div className="text-center">
+                       <span className="text-2xl font-black text-white">{Math.round(currentScale * 100)}%</span>
+                       <p className="text-[9px] text-indigo-400 font-bold">REAL WORLD SCALE</p>
+                    </div>
+                    <button onClick={() => adjustScale(0.1)} className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-all"><Plus className="w-5 h-5" /></button>
+                 </div>
+              </div>
+            )}
+
+            {/* Variant Swatches - ALWAYS clickable during AR for real-time color change */}
+            {(product.variants && product.variants.length > 0) && (
+              <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2 scrollbar-none">
                 <button
                   onClick={() => setSelectedVariant(undefined)}
-                  className={`relative w-9 h-9 rounded-full border-2 transition-all shrink-0 ${!selectedVariant ? 'border-indigo-400 scale-110' : 'border-white/20 hover:border-white/50'}`}
-                  title={product.colorName || 'Base Finish'}
+                  className={`relative w-10 h-10 rounded-full border-2 transition-all shrink-0 ${!selectedVariant ? 'border-indigo-400 scale-110' : 'border-white/20'}`}
                 >
-                  <span
-                    className="absolute inset-0.5 rounded-full border border-black/20"
-                    style={{ backgroundColor: product.color || '#F8F8F8' }}
-                  />
+                  <span className="absolute inset-0.5 rounded-full border border-black/20" style={{ backgroundColor: product.color || '#F8F8F8' }} />
                   {!selectedVariant && (
                     <span className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full border border-black" />
                   )}
                 </button>
-
                 {product.variants.map((v) => (
                   <button
                     key={v.id}
                     onClick={() => setSelectedVariant(v)}
-                    className={`relative w-9 h-9 rounded-full border-2 transition-all shrink-0 ${selectedVariant?.id === v.id ? 'border-indigo-400 scale-110' : 'border-white/20 hover:border-white/50'}`}
-                    title={v.name}
+                    className={`relative w-10 h-10 rounded-full border-2 transition-all shrink-0 ${selectedVariant?.id === v.id ? 'border-indigo-400 scale-110' : 'border-white/20'}`}
                   >
-                    <span
-                      className="absolute inset-0.5 rounded-full border border-black/20"
-                      style={{ backgroundColor: v.color }}
-                    />
+                    <span className="absolute inset-0.5 rounded-full border border-black/20" style={{ backgroundColor: v.color }} />
                     {selectedVariant?.id === v.id && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-500 rounded-full border border-black" />
                     )}
@@ -614,38 +669,30 @@ export const ARView: React.FC = () => {
                 {maxAvailable <= 0 ? 'Out of Stock' : 'Add to Cart'}
               </button>
 
-              {inAR ? (
+              {!inAR && (
                 <button
-                  onClick={handleResetPlacement}
-                  className="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-indigo-500 active:scale-95 transition-all flex items-center justify-center gap-2 border border-indigo-400/30"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Reset Placement
-                </button>
-              ) : (
-                <button
-                  disabled={launchingAR}
+                  disabled={launchingAR || !modelLoaded}
                   onClick={(e) => {
                     e.currentTarget.blur();
                     launchAR();
                   }}
                   className={`flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border border-indigo-400/30 ${
-                    launchingAR ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
+                    (launchingAR || !modelLoaded) ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
                   }`}
                 >
-                  {launchingAR ? (
+                  {(launchingAR || !modelLoaded) ? (
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
                     <Box className="w-4 h-4" />
                   )}
-                  {launchingAR ? 'Launching...' : 'View in AR'}
+                  {!modelLoaded ? 'Loading...' : launchingAR ? 'Launching...' : 'View in AR'}
                 </button>
               )}
             </div>
 
             {inAR && (
               <p className="text-center text-white/30 text-[10px] font-medium mt-3 uppercase tracking-widest">
-                Drag to move · Pinch to resize · Two-finger rotate
+                Drag to move · Pinch to rotate
               </p>
             )}
           </div>
