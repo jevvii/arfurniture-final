@@ -35,7 +35,7 @@ export const ARView: React.FC = () => {
   const [product, setProduct] = useState<Product | undefined>();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const [arStatus, setArStatus] = useState<'not-presenting' | 'session-started' | 'object-placed'>('not-presenting');
+  const [arStatus, setArStatus] = useState<'not-presenting' | 'session-started' | 'object-placed' | 'failed'>('not-presenting');
   const [arError, setArError] = useState<string | null>(null);
   const [showPlaced, setShowPlaced] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
@@ -95,8 +95,20 @@ export const ARView: React.FC = () => {
   };
 
   // Gather diagnostics whenever relevant state changes
-  const updateDiagnostics = () => {
+  const updateDiagnostics = async () => {
     const viewer = viewerRef.current;
+    let webxrSupport = 'n/a';
+    try {
+      if (typeof navigator !== 'undefined' && (navigator as any).xr?.isSessionSupported) {
+        const supported = await (navigator as any).xr.isSessionSupported('immersive-ar');
+        webxrSupport = supported ? 'yes' : 'no';
+      } else {
+        webxrSupport = 'missing API';
+      }
+    } catch {
+      webxrSupport = 'error';
+    }
+
     const d: Record<string, string> = {
       platform: platform.isIOS ? 'iOS' : platform.isAndroid ? 'Android' : 'Desktop',
       secureContext: typeof window !== 'undefined' && window.isSecureContext ? 'yes' : 'no',
@@ -105,7 +117,7 @@ export const ARView: React.FC = () => {
       modelLoaded: viewer?.model ? 'yes' : 'no',
       viewerReady: viewer ? 'yes' : 'no',
       activateARExists: typeof viewer?.activateAR === 'function' ? 'yes' : 'no',
-      canActivateAR: typeof viewer?.canActivateAR === 'function' ? (viewer.canActivateAR() ? 'yes' : 'no') : 'n/a',
+      webxrSupport,
       arStatus,
     };
     setDiagnostics(d);
@@ -127,6 +139,14 @@ export const ARView: React.FC = () => {
       if (status === 'object-placed') {
         setShowPlaced(true);
         setTimeout(() => setShowPlaced(false), 2000);
+      }
+      if (status === 'failed') {
+        const isBrave = typeof (navigator as any).brave?.isBrave === 'function';
+        setArError(
+          isBrave
+            ? 'Brave blocks AR features. Please open this page in Chrome (not Brave) for the best AR experience.'
+            : 'AR session failed. Try Chrome on Android with ARCore installed, or ensure your browser supports WebXR.'
+        );
       }
     };
 
@@ -168,7 +188,7 @@ export const ARView: React.FC = () => {
   /**
    * Launch AR.
    * - iOS Safari: click the native slot="ar-button" (AR Quick Look)
-   * - Android Chrome: activateAR() → webxr / scene-viewer
+   * - Android Chrome: check WebXR → activateAR() OR direct Scene Viewer intent
    */
   const launchAR = async () => {
     const viewer = viewerRef.current;
@@ -177,7 +197,7 @@ export const ARView: React.FC = () => {
       return;
     }
 
-    updateDiagnostics();
+    await updateDiagnostics();
 
     if (platform.isDesktop) {
       setArError('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
@@ -199,34 +219,88 @@ export const ARView: React.FC = () => {
       return;
     }
 
-    if (typeof viewer.activateAR !== 'function') {
-      setArError('Your browser does not support AR. Use Chrome or Edge on Android with HTTPS.');
-      return;
-    }
-
     // WebXR requires secure context (HTTPS)
     if (typeof window !== 'undefined' && !window.isSecureContext) {
       setArError('AR requires a secure HTTPS connection. Please check your URL starts with https://.');
       return;
     }
 
-    try {
-      await viewer.activateAR();
-      setArError(null);
-    } catch (e: any) {
-      console.error('AR activation failed:', e);
-      const msg = e?.message || String(e);
-      if (msg.includes('Permission') || msg.includes('permission')) {
-        setArError('Camera permission denied. Please allow camera access in your browser settings.');
-      } else if (msg.includes('HTTPS') || msg.includes('secure')) {
-        setArError('AR requires HTTPS. Please ensure you are on a secure connection.');
-      } else if (msg.includes('not supported') || msg.includes('Unsupported')) {
-        setArError('WebXR not supported on this device/browser. Try updating Chrome.');
-      } else {
-        setArError(`AR failed: ${msg}`);
-      }
+    const modelUrl = resolveAssetUrl(product?.arModelUrl);
+    if (!modelUrl) {
+      setArError('No AR model available for this product.');
+      return;
     }
-    updateDiagnostics();
+
+    // Check if WebXR immersive-ar is supported natively
+    let webxrSupported = false;
+    try {
+      if (typeof navigator !== 'undefined' && (navigator as any).xr?.isSessionSupported) {
+        webxrSupported = await (navigator as any).xr.isSessionSupported('immersive-ar');
+      }
+    } catch {
+      webxrSupported = false;
+    }
+
+    if (webxrSupported && typeof viewer.activateAR === 'function') {
+      // Native WebXR path (in-browser camera passthrough — the true Pokemon Go style)
+      try {
+        await viewer.activateAR();
+        setArError(null);
+      } catch (e: any) {
+        console.error('AR activation failed:', e);
+        const msg = e?.message || String(e);
+        if (msg.includes('Permission') || msg.includes('permission')) {
+          setArError('Camera permission denied. Please allow camera access in your browser settings.');
+        } else {
+          setArError(`AR failed: ${msg}`);
+        }
+      }
+      await updateDiagnostics();
+      return;
+    }
+
+    // Fallback: direct Scene Viewer intent (opens Google app with camera)
+    // This bypasses model-viewer when WebXR is unavailable (e.g. Brave browser)
+    const isBrave = typeof (navigator as any).brave?.isBrave === 'function';
+    const title = encodeURIComponent(product?.name || 'Furniture');
+    const fallbackUrl = encodeURIComponent(window.location.href);
+
+    // Scene Viewer intent URL
+    const intentUrl =
+      `intent://arvr.google.com/scene-viewer/1.0?` +
+      `file=${encodeURIComponent(modelUrl)}` +
+      `&mode=ar_preferred` +
+      `&title=${title}` +
+      `&resizable=true` +
+      `#Intent;` +
+      `scheme=https;` +
+      `package=com.google.android.googlequicksearchbox;` +
+      `action=android.intent.action.VIEW;` +
+      `S.browser_fallback_url=${fallbackUrl};` +
+      `end;`;
+
+    // Quick Look for iOS fallback (shouldn't reach here, but safe to include)
+    const usdzUrl = modelUrl.replace(/\.glb$/i, '.usdz');
+
+    if (isBrave) {
+      // Brave blocks intents; show specific guidance
+      setArError(
+        'Brave browser blocks AR. Please copy this link and open it in Chrome, or use the QR code with your phone\'s camera app.'
+      );
+      return;
+    }
+
+    // Attempt Scene Viewer intent
+    window.location.href = intentUrl;
+
+    // If we're still here after a short delay, the intent may have failed
+    setTimeout(() => {
+      setArError(
+        'Could not open Scene Viewer. Make sure Google app / ARCore is installed. Try Chrome instead of Brave or other privacy browsers.'
+      );
+    }, 1500);
+
+    await updateDiagnostics();
   };
 
   const handleResetPlacement = () => {
