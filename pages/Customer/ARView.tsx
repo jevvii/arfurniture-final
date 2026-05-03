@@ -40,6 +40,7 @@ export const ARView: React.FC = () => {
   const [showPlaced, setShowPlaced] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
   const [diagnostics, setDiagnostics] = useState<Record<string, string>>({});
+  const [launchingAR, setLaunchingAR] = useState(false);
 
   const viewerRef = useRef<any>(null);
   const arButtonRef = useRef<HTMLButtonElement>(null);
@@ -162,7 +163,7 @@ export const ARView: React.FC = () => {
 
   // Auto-launch on Android when coming from QR scan
   useEffect(() => {
-    if (!autoLaunch || !product || loading) return;
+    if (!autoLaunch || !product || loading || launchingAR) return;
     if (arStatus !== 'not-presenting') return;
     if (platform.isIOS) return; // iOS can't auto-launch
 
@@ -181,100 +182,123 @@ export const ARView: React.FC = () => {
   /**
    * Launch AR.
    * - iOS Safari: click the native slot="ar-button" (AR Quick Look)
-   * - Android Chrome: check WebXR → activateAR() OR direct Scene Viewer intent
+   * - Android: try WebXR with timeout → Scene Viewer intent fallback
    */
   const launchAR = async () => {
-    const viewer = viewerRef.current;
-    if (!viewer) {
-      setArError('3D viewer not initialized. Please wait for the model to load.');
-      return;
-    }
+    if (launchingAR) return;
+    setLaunchingAR(true);
 
-    await updateDiagnostics();
+    // Safety net: if nothing resolves after 6s, the button was probably blocked / hung
+    const safetyTimeout = setTimeout(() => {
+      setLaunchingAR(false);
+      setArError('AR launch timed out. Try Chrome if you are on a privacy browser like Brave.');
+    }, 6000);
 
-    if (platform.isDesktop) {
-      setArError('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
-      return;
-    }
+    const clearSafety = () => clearTimeout(safetyTimeout);
 
-    if (platform.isIOS) {
-      if (arButtonRef.current) {
-        arButtonRef.current.click();
-      } else {
-        setArError('AR button not found. Please refresh the page.');
-      }
-      return;
-    }
-
-    // Android path
-    if (!viewer.model) {
-      setArError('3D model is still loading. Please wait a moment and try again.');
-      return;
-    }
-
-    // WebXR requires secure context (HTTPS)
-    if (typeof window !== 'undefined' && !window.isSecureContext) {
-      setArError('AR requires a secure HTTPS connection. Please check your URL starts with https://.');
-      return;
-    }
-
-    const modelUrl = resolveAssetUrl(product?.arModelUrl);
-    if (!modelUrl) {
-      setArError('No AR model available for this product.');
-      return;
-    }
-
-    // Check if WebXR immersive-ar is supported natively
-    let webxrSupported = false;
     try {
-      if (typeof navigator !== 'undefined' && (navigator as any).xr?.isSessionSupported) {
-        webxrSupported = await (navigator as any).xr.isSessionSupported('immersive-ar');
+      const viewer = viewerRef.current;
+      if (!viewer) {
+        setArError('3D viewer not initialized. Please wait for the model to load.');
+        clearSafety();
+        return;
       }
-    } catch {
-      webxrSupported = false;
-    }
 
-    if (webxrSupported && typeof viewer.activateAR === 'function') {
-      // Native WebXR path (in-browser camera passthrough)
+      if (platform.isDesktop) {
+        setArError('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
+        clearSafety();
+        return;
+      }
+
+      if (platform.isIOS) {
+        if (arButtonRef.current) {
+          arButtonRef.current.click();
+        } else {
+          setArError('AR button not found. Please refresh the page.');
+        }
+        clearSafety();
+        return;
+      }
+
+      // Android path
+      if (!viewer.model) {
+        setArError('3D model is still loading. Please wait a moment and try again.');
+        clearSafety();
+        return;
+      }
+
+      if (typeof window !== 'undefined' && !window.isSecureContext) {
+        setArError('AR requires a secure HTTPS connection. Please check your URL starts with https://.');
+        clearSafety();
+        return;
+      }
+
+      const modelUrl = resolveAssetUrl(product?.arModelUrl);
+      if (!modelUrl) {
+        setArError('No AR model available for this product.');
+        clearSafety();
+        return;
+      }
+
+      // Try WebXR with strict timeouts (prevents hanging)
+      let webxrWorked = false;
       try {
-        await viewer.activateAR();
-        setArError(null);
-        await updateDiagnostics();
-        return; // Success — done
-      } catch (e: any) {
-        console.warn('WebXR activateAR failed, will try Scene Viewer fallback:', e);
-        // Do NOT show error yet — fall through to Scene Viewer intent below
+        let webxrSupported = false;
+        if (typeof navigator !== 'undefined' && (navigator as any).xr?.isSessionSupported) {
+          webxrSupported = await Promise.race([
+            (navigator as any).xr.isSessionSupported('immersive-ar'),
+            new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000))
+          ]);
+        }
+
+        if (webxrSupported && typeof viewer.activateAR === 'function') {
+          await Promise.race([
+            viewer.activateAR(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000))
+          ]);
+          // WebXR succeeded!
+          webxrWorked = true;
+          setArError(null);
+        }
+      } catch {
+        // WebXR not available or timed out — fall through to Scene Viewer
       }
+
+      if (webxrWorked) {
+        clearSafety();
+        return;
+      }
+
+      // Scene Viewer intent fallback
+      const title = encodeURIComponent(product?.name || 'Furniture');
+      const fallbackUrl = encodeURIComponent(window.location.href);
+      const intentUrl =
+        `intent://arvr.google.com/scene-viewer/1.0?` +
+        `file=${encodeURIComponent(modelUrl)}` +
+        `&mode=ar_preferred` +
+        `&title=${title}` +
+        `&resizable=true` +
+        `#Intent;` +
+        `scheme=https;` +
+        `package=com.google.android.googlequicksearchbox;` +
+        `action=android.intent.action.VIEW;` +
+        `S.browser_fallback_url=${fallbackUrl};` +
+        `end;`;
+
+      window.location.href = intentUrl;
+
+      // If still here after 2.5s, intent probably didn't open
+      setTimeout(() => {
+        setLaunchingAR(false);
+        setArError('Could not open AR. Make sure Google app / ARCore is installed.');
+      }, 2500);
+
+      clearSafety();
+    } catch (e: any) {
+      console.error('Unexpected AR launch error:', e);
+      setArError(`Unexpected error: ${e?.message || 'Unknown'}`);
+      clearSafety();
     }
-
-    // Scene Viewer intent fallback (works on most Android browsers even without WebXR)
-    const title = encodeURIComponent(product?.name || 'Furniture');
-    const fallbackUrl = encodeURIComponent(window.location.href);
-
-    const intentUrl =
-      `intent://arvr.google.com/scene-viewer/1.0?` +
-      `file=${encodeURIComponent(modelUrl)}` +
-      `&mode=ar_preferred` +
-      `&title=${title}` +
-      `&resizable=true` +
-      `#Intent;` +
-      `scheme=https;` +
-      `package=com.google.android.googlequicksearchbox;` +
-      `action=android.intent.action.VIEW;` +
-      `S.browser_fallback_url=${fallbackUrl};` +
-      `end;`;
-
-    // Navigate to intent — this opens Google Scene Viewer app or Quick Search box
-    window.location.href = intentUrl;
-
-    // If still here after a delay, Scene Viewer probably didn't open
-    setTimeout(() => {
-      setArError(
-        'Could not open AR. Make sure Google app / ARCore is installed, and try Chrome if you\'re on a privacy browser like Brave.'
-      );
-    }, 2000);
-
-    await updateDiagnostics();
   };
 
   const handleResetPlacement = () => {
@@ -401,7 +425,10 @@ export const ARView: React.FC = () => {
             <p className="text-slate-400 text-sm mb-6">{arError}</p>
             <div className="flex gap-3">
               <button
-                onClick={() => setArError(null)}
+                onClick={() => {
+                  setArError(null);
+                  setLaunchingAR(false);
+                }}
                 className="flex-1 bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-700 transition-all border border-slate-700"
               >
                 Dismiss
@@ -434,11 +461,21 @@ export const ARView: React.FC = () => {
             </p>
 
             <button
-              onClick={launchAR}
-              className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 hover:bg-indigo-500 active:scale-95 transition-all flex items-center gap-3 mx-auto border border-indigo-400/30"
+              disabled={launchingAR}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                launchAR();
+              }}
+              className={`bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 transition-all flex items-center gap-3 mx-auto border border-indigo-400/30 ${
+                launchingAR ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
+              }`}
             >
-              <Box className="w-6 h-6" />
-              View in AR
+              {launchingAR ? (
+                <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Box className="w-6 h-6" />
+              )}
+              {launchingAR ? 'Launching...' : 'View in AR'}
             </button>
           </div>
         </div>
@@ -543,11 +580,21 @@ export const ARView: React.FC = () => {
                 </button>
               ) : (
                 <button
-                  onClick={launchAR}
-                  className="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-indigo-500 active:scale-95 transition-all flex items-center justify-center gap-2 border border-indigo-400/30"
+                  disabled={launchingAR}
+                  onClick={(e) => {
+                    e.currentTarget.blur();
+                    launchAR();
+                  }}
+                  className={`flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 border border-indigo-400/30 ${
+                    launchingAR ? 'opacity-80 cursor-wait' : 'hover:bg-indigo-500 active:scale-95'
+                  }`}
                 >
-                  <Box className="w-4 h-4" />
-                  View in AR
+                  {launchingAR ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Box className="w-4 h-4" />
+                  )}
+                  {launchingAR ? 'Launching...' : 'View in AR'}
                 </button>
               )}
             </div>
