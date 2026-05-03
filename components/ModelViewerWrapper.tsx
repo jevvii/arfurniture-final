@@ -100,7 +100,7 @@ export const ModelViewerWrapper: React.FC<ModelViewerProps> = ({ src, poster, al
         max-camera-orbit="auto auto 150%"
         interaction-prompt="auto"
         className="w-full h-full"
-        style={{ width: '100%', height: '100%', minHeight: '480px' }}
+        style={{ width: '100%', height: '100%' }}
       >
         <button 
           slot="ar-button" 
