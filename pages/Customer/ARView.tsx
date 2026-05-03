@@ -7,6 +7,7 @@ import {
   Crosshair,
   RotateCcw,
   AlertTriangle,
+  Bug,
 } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
@@ -37,6 +38,8 @@ export const ARView: React.FC = () => {
   const [arStatus, setArStatus] = useState<'not-presenting' | 'session-started' | 'object-placed'>('not-presenting');
   const [arError, setArError] = useState<string | null>(null);
   const [showPlaced, setShowPlaced] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  const [diagnostics, setDiagnostics] = useState<Record<string, string>>({});
 
   const viewerRef = useRef<any>(null);
   const arButtonRef = useRef<HTMLButtonElement>(null);
@@ -91,15 +94,36 @@ export const ARView: React.FC = () => {
     });
   };
 
+  // Gather diagnostics whenever relevant state changes
+  const updateDiagnostics = () => {
+    const viewer = viewerRef.current;
+    const d: Record<string, string> = {
+      platform: platform.isIOS ? 'iOS' : platform.isAndroid ? 'Android' : 'Desktop',
+      secureContext: typeof window !== 'undefined' && window.isSecureContext ? 'yes' : 'no',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent.slice(0, 60) : 'n/a',
+      modelUrl: product?.arModelUrl ? resolveAssetUrl(product.arModelUrl) : 'none',
+      modelLoaded: viewer?.model ? 'yes' : 'no',
+      viewerReady: viewer ? 'yes' : 'no',
+      activateARExists: typeof viewer?.activateAR === 'function' ? 'yes' : 'no',
+      canActivateAR: typeof viewer?.canActivateAR === 'function' ? (viewer.canActivateAR() ? 'yes' : 'no') : 'n/a',
+      arStatus,
+    };
+    setDiagnostics(d);
+  };
+
   // Listen for model load and AR status
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    const handleLoad = () => applyColor();
+    const handleLoad = () => {
+      applyColor();
+      updateDiagnostics();
+    };
     const handleArStatus = (e: any) => {
       const status = e.detail?.status || 'not-presenting';
       setArStatus(status);
+      updateDiagnostics();
       if (status === 'object-placed') {
         setShowPlaced(true);
         setTimeout(() => setShowPlaced(false), 2000);
@@ -110,11 +134,13 @@ export const ARView: React.FC = () => {
     viewer.addEventListener('ar-status', handleArStatus);
 
     if (viewer.model) applyColor();
+    updateDiagnostics();
 
     return () => {
       viewer.removeEventListener('load', handleLoad);
       viewer.removeEventListener('ar-status', handleArStatus);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, selectedVariant]);
 
   useEffect(() => {
@@ -142,11 +168,16 @@ export const ARView: React.FC = () => {
   /**
    * Launch AR.
    * - iOS Safari: click the native slot="ar-button" (AR Quick Look)
-   * - Android Chrome: activateAR() → scene-viewer / webxr
+   * - Android Chrome: activateAR() → webxr / scene-viewer
    */
   const launchAR = async () => {
     const viewer = viewerRef.current;
-    if (!viewer) return;
+    if (!viewer) {
+      setArError('3D viewer not initialized. Please wait for the model to load.');
+      return;
+    }
+
+    updateDiagnostics();
 
     if (platform.isDesktop) {
       setArError('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
@@ -156,12 +187,26 @@ export const ARView: React.FC = () => {
     if (platform.isIOS) {
       if (arButtonRef.current) {
         arButtonRef.current.click();
+      } else {
+        setArError('AR button not found. Please refresh the page.');
       }
       return;
     }
 
-    if (!viewer.activateAR) {
-      setArError('Your browser does not support AR. Try Chrome on Android.');
+    // Android path
+    if (!viewer.model) {
+      setArError('3D model is still loading. Please wait a moment and try again.');
+      return;
+    }
+
+    if (typeof viewer.activateAR !== 'function') {
+      setArError('Your browser does not support AR. Use Chrome or Edge on Android with HTTPS.');
+      return;
+    }
+
+    // WebXR requires secure context (HTTPS)
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setArError('AR requires a secure HTTPS connection. Please check your URL starts with https://.');
       return;
     }
 
@@ -170,8 +215,18 @@ export const ARView: React.FC = () => {
       setArError(null);
     } catch (e: any) {
       console.error('AR activation failed:', e);
-      setArError(e?.message || 'Could not start AR. Ensure HTTPS and camera permissions.');
+      const msg = e?.message || String(e);
+      if (msg.includes('Permission') || msg.includes('permission')) {
+        setArError('Camera permission denied. Please allow camera access in your browser settings.');
+      } else if (msg.includes('HTTPS') || msg.includes('secure')) {
+        setArError('AR requires HTTPS. Please ensure you are on a secure connection.');
+      } else if (msg.includes('not supported') || msg.includes('Unsupported')) {
+        setArError('WebXR not supported on this device/browser. Try updating Chrome.');
+      } else {
+        setArError(`AR failed: ${msg}`);
+      }
     }
+    updateDiagnostics();
   };
 
   const handleResetPlacement = () => {
@@ -217,7 +272,7 @@ export const ARView: React.FC = () => {
           camera-controls
           auto-rotate={!inAR}
           ar
-          ar-modes="scene-viewer webxr quick-look"
+          ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           ar-scale="fixed"
           exposure="1"
@@ -231,9 +286,10 @@ export const ARView: React.FC = () => {
           style={{ width: '100%', height: '100%' }}
         >
           {/*
-            slot="ar-button" — on iOS this MUST be the element the user taps.
-            We position it in the center of the screen so it covers our prompt area.
-            On Android / Desktop it stays hidden.
+            slot="ar-button" — model-viewer requires this element to exist in the DOM
+            for AR discovery even when we call activateAR() programmatically.
+            On iOS it is visible and clickable (AR Quick Look requirement).
+            On Android/Desktop it is invisible but still present in the DOM.
           */}
           <button
             ref={arButtonRef}
@@ -241,7 +297,7 @@ export const ARView: React.FC = () => {
             className={
               platform.isIOS
                 ? 'absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[40%] z-50 bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-lg shadow-2xl shadow-indigo-900/50 hover:bg-indigo-500 active:scale-95 transition-all flex items-center gap-3 border border-indigo-400/30 cursor-pointer'
-                : 'hidden'
+                : 'opacity-0 pointer-events-none absolute w-0 h-0'
             }
           >
             <Box className="w-6 h-6" />
@@ -273,6 +329,17 @@ export const ARView: React.FC = () => {
             <span className="text-xs font-bold text-white">Placed!</span>
           </div>
         )}
+
+        <button
+          onClick={() => {
+            updateDiagnostics();
+            setShowDebug(prev => !prev);
+          }}
+          className="pointer-events-auto p-2 bg-black/50 backdrop-blur-md rounded-full border border-white/10 text-white/60 hover:text-white transition-colors"
+          title="Toggle diagnostics"
+        >
+          <Bug className="w-4 h-4" />
+        </button>
       </div>
 
       {/* --- Desktop / Error Overlay --- */}
@@ -445,6 +512,26 @@ export const ARView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* --- Diagnostics Overlay --- */}
+      {showDebug && (
+        <div className="absolute top-16 right-4 z-[60] bg-black/90 backdrop-blur-md border border-white/20 rounded-xl p-4 max-w-xs text-left shadow-2xl">
+          <h4 className="text-white font-bold text-xs mb-2 uppercase tracking-wider">AR Diagnostics</h4>
+          <div className="space-y-1">
+            {Object.entries(diagnostics).map(([key, value]) => (
+              <div key={key} className="flex justify-between gap-4 text-[11px]">
+                <span className="text-slate-400 font-medium">{key}</span>
+                <span className={`font-mono font-bold ${value === 'yes' ? 'text-emerald-400' : value === 'no' ? 'text-rose-400' : 'text-white'}`}>
+                  {value}
+                </span>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-500 mt-3 leading-relaxed">
+            Tap the bug icon again to hide. Screenshot this and send it if AR still fails.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
