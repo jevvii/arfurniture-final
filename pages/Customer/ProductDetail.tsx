@@ -151,6 +151,7 @@ export const ProductDetail: React.FC = () => {
                   poster={activeImage}
                   alt={`3D model of ${product.name}`}
                   color={selectedVariant?.color || product.color}
+                  productId={product._id}
                 />
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-medium text-slate-600 pointer-events-none z-10">
                   Interactive 3D

@@ -1,11 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ShoppingCart, Box, Crosshair, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Box, Crosshair, RotateCcw, AlertTriangle } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
 import { useCart } from '../../contexts/CartContext';
 import { ColorTintedImage } from '../../components/ColorTintedImage';
 import { CURRENCY, resolveAssetUrl } from '../../constants';
+
+function hexToRgba(hex: string): [number, number, number, number] {
+  const clean = hex.replace('#', '');
+  const bigint = parseInt(clean, 16);
+  const r = ((bigint >> 16) & 255) / 255;
+  const g = ((bigint >> 8) & 255) / 255;
+  const b = (bigint & 255) / 255;
+  return [r, g, b, 1];
+}
 
 export const ARView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,11 +24,12 @@ export const ARView: React.FC = () => {
   const [product, setProduct] = useState<Product | undefined>();
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | undefined>(undefined);
   const [loading, setLoading] = useState(true);
-  const [isARActive, setIsARActive] = useState(false);
+  const [arStatus, setArStatus] = useState<'not-presenting' | 'session-started' | 'object-placed'>('not-presenting');
+  const [arError, setArError] = useState<string | null>(null);
   const [showPlaced, setShowPlaced] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const viewerRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -31,6 +41,12 @@ export const ARView: React.FC = () => {
     load();
   }, [id]);
 
+  // Detect desktop vs mobile for AR capability messaging
+  useEffect(() => {
+    const check = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    setIsDesktop(!check);
+  }, []);
+
   // Prevent body scroll when AR view is open
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -39,26 +55,97 @@ export const ARView: React.FC = () => {
     };
   }, []);
 
-  const handleBack = () => {
-    if (product) {
-      navigate(`/product/${product._id}`);
-    } else {
-      navigate('/');
+  // Apply color to 3D model materials whenever color or model changes
+  const applyColor = () => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    const model = viewer.model;
+    if (!model) return;
+
+    const color = selectedVariant?.color || product?.color;
+    if (!color) {
+      model.materials.forEach((material: any) => {
+        if (material.pbrMetallicRoughness) {
+          material.pbrMetallicRoughness.setBaseColorFactor(null);
+        }
+      });
+      return;
     }
+
+    const [r, g, b, a] = hexToRgba(color);
+    model.materials.forEach((material: any) => {
+      if (material.pbrMetallicRoughness) {
+        material.pbrMetallicRoughness.setBaseColorFactor([r, g, b, a]);
+      }
+    });
+  };
+
+  // Listen for model load and AR status events
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    const handleLoad = () => applyColor();
+    const handleArStatus = (e: any) => {
+      const status = e.detail?.status || 'not-presenting';
+      setArStatus(status);
+      if (status === 'object-placed') {
+        setShowPlaced(true);
+        setTimeout(() => setShowPlaced(false), 2000);
+      }
+    };
+
+    viewer.addEventListener('load', handleLoad);
+    viewer.addEventListener('ar-status', handleArStatus);
+
+    // If model already loaded (e.g. cached), apply immediately
+    if (viewer.model) applyColor();
+
+    return () => {
+      viewer.removeEventListener('load', handleLoad);
+      viewer.removeEventListener('ar-status', handleArStatus);
+    };
+  }, [product, selectedVariant]);
+
+  // Re-apply color when variant changes
+  useEffect(() => {
+    applyColor();
+  }, [selectedVariant, product]);
+
+  const handleBack = () => {
+    if (product) navigate(`/product/${product._id}`);
+    else navigate('/');
   };
 
   const launchAR = async () => {
     const viewer = viewerRef.current;
-    if (!viewer || !viewer.activateAR) return;
+    if (!viewer) return;
+
+    // On desktop, AR via WebXR is unsupported — show a helpful message
+    if (isDesktop) {
+      setArError('AR requires a mobile device with a camera. Please scan the QR code on your phone.');
+      return;
+    }
+
+    if (!viewer.activateAR) {
+      setArError('Your browser does not support WebXR AR. Try Chrome on Android or Safari on iOS.');
+      return;
+    }
+
     try {
       await viewer.activateAR();
-      setIsARActive(true);
-    } catch (e) {
+      setArError(null);
+    } catch (e: any) {
       console.error('AR activation failed:', e);
+      setArError(e?.message || 'Could not start AR. Make sure you are on HTTPS and camera permissions are allowed.');
     }
   };
 
-  const handlePlace = () => {
+  const handleResetPlacement = () => {
+    const viewer = viewerRef.current;
+    if (viewer && viewer.resetARPlacement) {
+      viewer.resetARPlacement();
+    }
     setShowPlaced(true);
     setTimeout(() => setShowPlaced(false), 2000);
   };
@@ -70,7 +157,7 @@ export const ARView: React.FC = () => {
 
   if (loading || !product) {
     return (
-      <div className="fixed inset-0 z-[200] bg-slate-900 flex flex-col items-center justify-center text-white">
+      <div className="fixed inset-0 z-[200] bg-black flex flex-col items-center justify-center text-white">
         <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-sm font-bold uppercase tracking-widest text-slate-400">Loading 3D model...</p>
       </div>
@@ -80,12 +167,13 @@ export const ARView: React.FC = () => {
   const activeColor = selectedVariant?.color || product.color;
   const activeName = selectedVariant?.name || product.colorName || 'Base Finish';
   const maxAvailable = selectedVariant?.stock ?? product.stock;
+  const inAR = arStatus === 'session-started' || arStatus === 'object-placed';
 
-  // Cast to bypass TS intrinsic check
+  // Cast to bypass TS intrinsic check for custom web component
   const ModelViewer = 'model-viewer' as any;
 
   return (
-    <div ref={containerRef} className="fixed inset-0 z-[200] bg-black overflow-hidden select-none">
+    <div className="fixed inset-0 z-[200] bg-black overflow-hidden select-none">
       {/* --- Full-screen 3D / AR Viewer --- */}
       <div className="absolute inset-0 w-full h-full">
         <ModelViewer
@@ -95,12 +183,11 @@ export const ARView: React.FC = () => {
           shadow-intensity="1.5"
           shadow-softness="1"
           camera-controls
-          auto-rotate
+          auto-rotate={!inAR} // Stop auto-rotate when in AR so user can place manually
           ar
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           ar-scale="fixed"
-          environment-image="neutral"
           exposure="1"
           loading="eager"
           reveal="auto"
@@ -111,7 +198,7 @@ export const ARView: React.FC = () => {
           className="w-full h-full"
           style={{ width: '100%', height: '100%' }}
         >
-          {/* Native AR slot button - hidden; we trigger via custom UI */}
+          {/* Native AR slot button hidden — we trigger programmatically */}
           <button slot="ar-button" style={{ display: 'none' }} />
         </ModelViewer>
       </div>
@@ -120,15 +207,14 @@ export const ARView: React.FC = () => {
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4 pointer-events-none">
         <button
           onClick={handleBack}
-          className="pointer-events-auto flex items-center gap-2 bg-black/40 backdrop-blur-md text-white px-4 py-2.5 rounded-full text-sm font-bold border border-white/10 hover:bg-black/60 transition-all active:scale-95"
+          className="pointer-events-auto flex items-center gap-2 bg-black/50 backdrop-blur-md text-white px-4 py-2.5 rounded-full text-sm font-bold border border-white/10 hover:bg-black/70 transition-all active:scale-95"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
 
-        {/* Reticle hint when not in active AR */}
-        {!isARActive && (
-          <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+        {!inAR && !arError && (
+          <div className="bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
             <Crosshair className="w-3.5 h-3.5 text-indigo-400" />
             <span className="text-[10px] font-bold text-white uppercase tracking-wider">Point at floor</span>
           </div>
@@ -142,8 +228,37 @@ export const ARView: React.FC = () => {
         )}
       </div>
 
+      {/* --- Desktop / Error Overlay --- */}
+      {!inAR && arError && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-8 max-w-sm text-center shadow-2xl">
+            <div className="w-14 h-14 bg-orange-500/20 text-orange-400 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <h2 className="text-white font-bold text-lg mb-2">AR Not Available</h2>
+            <p className="text-slate-400 text-sm mb-6">{arError}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setArError(null)}
+                className="flex-1 bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-700 transition-all border border-slate-700"
+              >
+                Dismiss
+              </button>
+              {isDesktop && (
+                <Link
+                  to={`/product/${product._id}`}
+                  className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-500 transition-all flex items-center justify-center"
+                >
+                  Get QR Code
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- Center "Launch AR" Prompt (Pre-AR State) --- */}
-      {!isARActive && (
+      {!inAR && !arError && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div className="text-center pointer-events-auto">
             {/* Floor reticle animation */}
@@ -153,7 +268,9 @@ export const ARView: React.FC = () => {
               <Crosshair className="absolute inset-0 m-auto w-8 h-8 text-white/80" />
             </div>
             <h2 className="text-white/90 text-lg font-bold mb-2 drop-shadow-lg">Ready to place in your room</h2>
-            <p className="text-white/50 text-xs font-medium mb-6 max-w-[200px] mx-auto">Tap below to start AR. Point your camera at the floor and move slowly.</p>
+            <p className="text-white/50 text-xs font-medium mb-6 max-w-[220px] mx-auto">
+              Tap below to start AR. Point your camera at the floor and move slowly.
+            </p>
 
             <button
               onClick={launchAR}
@@ -167,7 +284,7 @@ export const ARView: React.FC = () => {
       )}
 
       {/* --- Bottom Product Overlay Sheet (Pokemon Go-style) --- */}
-      <div className="absolute bottom-0 left-0 right-0 z-20">
+      <div className={`absolute bottom-0 left-0 right-0 z-20 transition-transform duration-500 ${inAR ? 'translate-y-0' : ''}`}>
         <div className="bg-gradient-to-t from-black/90 via-black/70 to-transparent pt-16 pb-6 px-5">
           <div className="max-w-md mx-auto">
             {/* Product Card Row */}
@@ -239,9 +356,9 @@ export const ARView: React.FC = () => {
                 {maxAvailable <= 0 ? 'Out of Stock' : 'Add to Cart'}
               </button>
 
-              {isARActive ? (
+              {inAR ? (
                 <button
-                  onClick={handlePlace}
+                  onClick={handleResetPlacement}
                   className="flex-1 bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-sm hover:bg-indigo-500 active:scale-95 transition-all flex items-center justify-center gap-2 border border-indigo-400/30"
                 >
                   <RotateCcw className="w-4 h-4" />
@@ -259,7 +376,7 @@ export const ARView: React.FC = () => {
             </div>
 
             {/* In-AR helper hint */}
-            {isARActive && (
+            {inAR && (
               <p className="text-center text-white/30 text-[10px] font-medium mt-3 uppercase tracking-widest">
                 Drag to move &middot; Pinch to resize &middot; Two-finger rotate
               </p>
