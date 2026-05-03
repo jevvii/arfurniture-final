@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Box, Wand2, Send, Truck, RefreshCw, ShieldCheck, Image as ImageIcon, Plus, Minus, Smartphone } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
@@ -14,6 +14,8 @@ import { CURRENCY, resolveAssetUrl } from '../../constants';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   const [product, setProduct] = useState<Product | undefined>();
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,7 +154,7 @@ export const ProductDetail: React.FC = () => {
                   poster={activeImage}
                   alt={`3D model of ${product.name}`}
                   color={selectedVariant?.color || product.color}
-                  onARClick={() => setIsQRModalOpen(true)}
+                  onARClick={() => isMobile ? navigate(`/ar/${product._id}`) : setIsQRModalOpen(true)}
                 />
                 <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-medium text-slate-600 pointer-events-none z-10">
                   Interactive 3D
@@ -414,9 +416,9 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              {/* AR Trigger - Desktop: QR modal. Mobile QR scans go to /ar/:id */}
+              {/* AR Trigger - Mobile goes to /ar/:id, Desktop shows QR modal */}
               <button
-                onClick={() => setIsQRModalOpen(true)}
+                onClick={() => isMobile ? navigate(`/ar/${product._id}`) : setIsQRModalOpen(true)}
                 className="flex-1 sm:flex-none sm:w-auto bg-indigo-50 border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95"
               >
                 <Smartphone className="w-5 h-5" />
