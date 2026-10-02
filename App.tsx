@@ -100,13 +100,41 @@ const App: React.FC = () => {
     return null;
   });
   const [isAuthModalOpen, setAuthModalOpen] = useState(false);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [pendingCartAction, setPendingCartAction] = useState<{ product: Product, variant?: ProductVariant, quantity: number } | null>(null);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    try {
+      const savedUser = localStorage.getItem('arfurniture_user');
+      if (!savedUser) {
+        const savedGuestCart = localStorage.getItem('arfurniture_guest_cart');
+        if (savedGuestCart) return JSON.parse(savedGuestCart);
+      }
+    } catch {}
+    return [];
+  });
   const [toast, setToast] = useState<{ show: boolean, productName: string } | null>(null);
 
   const showSuccessToast = (productName: string) => {
     setToast({ show: true, productName });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // Helper to merge local guest cart into authenticated user cart
+  const mergeGuestCartWithUser = async (userId: string, currentLocalCart: CartItem[]) => {
+    try {
+      if (currentLocalCart.length > 0) {
+        for (const item of currentLocalCart) {
+          try {
+            await db.addToCart(userId, item._id, item.selectedVariant?.id, item.quantity);
+          } catch (e) {
+            console.warn('Failed to merge guest cart item into account:', item._id, e);
+          }
+        }
+      }
+      localStorage.removeItem('arfurniture_guest_cart');
+      const refreshedCart = await db.getCart(userId);
+      setCart(refreshedCart);
+    } catch (error) {
+      console.error('Failed to merge cart:', error);
+    }
   };
 
   // Load cart on initial mount if user exists (was persisted)
@@ -116,27 +144,12 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Effect to handle pending cart action after login
-  useEffect(() => {
-    if (user && pendingCartAction) {
-      addToCart(pendingCartAction.product, pendingCartAction.variant, pendingCartAction.quantity);
-      setPendingCartAction(null);
-    }
-  }, [user, pendingCartAction]);
-
   // Customer login only
   const handleUserLogin = async (email: string, pass: string) => {
     const customer = await loginUser(email, pass);
     setUser(customer);
     localStorage.setItem('arfurniture_user', JSON.stringify(customer));
-    
-    // Load cart from database after login
-    try {
-      const userCart = await db.getCart(customer._id);
-      setCart(userCart);
-    } catch (error) {
-      console.error('Failed to load cart:', error);
-    }
+    await mergeGuestCartWithUser(customer._id, cart);
     return customer;
   };
 
@@ -152,13 +165,7 @@ const App: React.FC = () => {
     const user = await registerUser(fname, lname, email, pass, mname);
     setUser(user);
     localStorage.setItem('arfurniture_user', JSON.stringify(user));
-    
-    try {
-      const userCart = await db.getCart(user._id);
-      setCart(userCart);
-    } catch (error) {
-      console.error('Failed to load cart:', error);
-    }
+    await mergeGuestCartWithUser(user._id, cart);
     return user;
   };
 
@@ -166,6 +173,7 @@ const App: React.FC = () => {
     setUser(null);
     setCart([]); // Clear cart on logout
     localStorage.removeItem('arfurniture_user');
+    localStorage.removeItem('arfurniture_guest_cart');
   };
 
   const handleUpdateAddress = async (address: Address) => {
@@ -182,14 +190,8 @@ const App: React.FC = () => {
     localStorage.setItem('arfurniture_user', JSON.stringify(updatedUser));
   };
 
-  // Cart Handlers - Require authentication
+  // Cart Handlers - Frictionless Guest Support + Authenticated Sync
   const addToCart = async (product: Product, variant?: ProductVariant, quantity = 1) => {
-    if (!user) {
-      setPendingCartAction({ product, variant, quantity });
-      setAuthModalOpen(true);
-      return;
-    }
-
     // Stock Validation
     const availableStock = variant?.stock ?? product.stock;
     const currentItemInCart = cart.find(item => 
@@ -203,80 +205,95 @@ const App: React.FC = () => {
       return;
     }
 
-    try {
-      await db.addToCart(user._id, product._id, variant?.id, quantity);
-      
-      // Show confirmation toast
-      showSuccessToast(product.name);
-
-      // Update local state
-      setCart(prev => {
-        const existing = prev.find(item =>
-          item._id === product._id &&
-          (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant)
-        );
-
-        if (existing) {
-          return prev.map(item =>
-            (item._id === product._id && (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant))
-              ? { ...item, quantity: item.quantity + quantity }
-              : item
-          );
-        }
-        return [...prev, { ...product, quantity: quantity, selectedVariant: variant }];
-      });
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-      alert('Failed to add item to cart. Please try again.');
+    if (user) {
+      try {
+        await db.addToCart(user._id, product._id, variant?.id, quantity);
+      } catch (error) {
+        console.error('Failed to add to cart on server:', error);
+      }
     }
+
+    showSuccessToast(product.name);
+
+    setCart(prev => {
+      const existing = prev.find(item =>
+        item._id === product._id &&
+        (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant)
+      );
+
+      let nextCart: CartItem[];
+      if (existing) {
+        nextCart = prev.map(item =>
+          (item._id === product._id && (variant ? item.selectedVariant?.id === variant.id : !item.selectedVariant))
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      } else {
+        nextCart = [...prev, { ...product, quantity: quantity, selectedVariant: variant }];
+      }
+
+      if (!user) {
+        localStorage.setItem('arfurniture_guest_cart', JSON.stringify(nextCart));
+      }
+      return nextCart;
+    });
   };
 
   const removeFromCart = async (id: string, variantId?: string) => {
-    if (!user) return;
-
-    try {
-      await db.removeFromCart(user._id, id, variantId);
-      // Update local state
-      setCart(prev => prev.filter(item => !(item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant))));
-    } catch (error) {
-      console.error('Failed to remove from cart:', error);
-      alert('Failed to remove item from cart. Please try again.');
+    if (user) {
+      try {
+        await db.removeFromCart(user._id, id, variantId);
+      } catch (error) {
+        console.error('Failed to remove from cart on server:', error);
+      }
     }
+    setCart(prev => {
+      const nextCart = prev.filter(item => !(item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant)));
+      if (!user) {
+        localStorage.setItem('arfurniture_guest_cart', JSON.stringify(nextCart));
+      }
+      return nextCart;
+    });
   };
 
   const updateQuantity = async (id: string, delta: number, variantId?: string) => {
-    if (!user) return;
-
     const item = cart.find(i => i._id === id && (variantId ? i.selectedVariant?.id === variantId : !i.selectedVariant));
     if (!item) return;
 
     const newQuantity = Math.max(1, item.quantity + delta);
 
-    try {
-      await db.updateCartItem(user._id, id, newQuantity, variantId);
-      // Update local state
-      setCart(prev => prev.map(item => {
+    if (user) {
+      try {
+        await db.updateCartItem(user._id, id, newQuantity, variantId);
+      } catch (error) {
+        console.error('Failed to update quantity on server:', error);
+      }
+    }
+
+    setCart(prev => {
+      const nextCart = prev.map(item => {
         if (item._id === id && (variantId ? item.selectedVariant?.id === variantId : !item.selectedVariant)) {
           return { ...item, quantity: newQuantity };
         }
         return item;
-      }));
-    } catch (error) {
-      console.error('Failed to update quantity:', error);
-      alert('Failed to update quantity. Please try again.');
-    }
+      });
+      if (!user) {
+        localStorage.setItem('arfurniture_guest_cart', JSON.stringify(nextCart));
+      }
+      return nextCart;
+    });
   };
 
   const clearCart = async () => {
-    if (!user) return;
-
-    try {
-      await db.clearCart(user._id);
-      setCart([]);
-    } catch (error) {
-      console.error('Failed to clear cart:', error);
-      alert('Failed to clear cart. Please try again.');
+    if (user) {
+      try {
+        await db.clearCart(user._id);
+      } catch (error) {
+        console.error('Failed to clear cart on server:', error);
+      }
     }
+    setCart([]);
+    localStorage.removeItem('arfurniture_guest_cart');
   };
 
   const updateItemVariant = async (product: Product, oldVariantId: string | undefined, newVariant: ProductVariant, quantity: number) => {

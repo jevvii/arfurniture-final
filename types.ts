@@ -82,9 +82,10 @@ export interface Order {
   recipientName: string;     // Added
   contactNumber: string;     // Added
   email?: string;            // Added
+  paymentMethod?: string;    // Added
   items: OrderItem[];
   totalAmount: number;
-  shippingAddress?: Address;
+  shippingAddress?: Address & { fullName?: string };
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
   createdAt: Date;
 }

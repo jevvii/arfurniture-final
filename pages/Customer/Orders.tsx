@@ -5,9 +5,9 @@ import { db } from '../../services/db';
 import { Order, OrderItem } from '../../types';
 import { 
   Package, Truck, CheckCircle, Clock, XCircle, ChevronRight, 
-  Search, Filter, ShoppingBag 
+  Search, Filter, ShoppingBag, Wallet 
 } from 'lucide-react';
-import { CURRENCY } from '../../constants';
+import { CURRENCY, resolveAssetUrl } from '../../constants';
 
 // Helper for status colors (reused/adapted from Admin)
 const getStatusColor = (status: string) => {
@@ -198,7 +198,7 @@ export const Orders: React.FC = () => {
                     <div key={idx} className="flex gap-4">
                       <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shrink-0">
                         <img 
-                          src={item.imageUrl} 
+                          src={resolveAssetUrl(item.imageUrl)} 
                           alt={item.productName} 
                           className="w-full h-full object-cover"
                         />
@@ -238,16 +238,22 @@ export const Orders: React.FC = () => {
               </div>
               
               {/* Order Footer / Shipping Info */}
-              {order.shippingAddress && (
-                <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
+              <div className="px-4 sm:px-6 py-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex flex-col sm:flex-row justify-between gap-2">
+                {order.shippingAddress && (
                   <div className="flex flex-col sm:flex-row gap-1">
-                    <span className="font-medium text-slate-700 whitespace-nowrap">Shipping to:</span>
-                    <span className="truncate">
-                      {order.shippingAddress.fullName || order.customerName}, {order.shippingAddress.street}, {order.shippingAddress.city}
+                    <span className="font-bold text-slate-700 whitespace-nowrap">Shipping to:</span>
+                    <span>
+                      {order.recipientName || order.shippingAddress.fullName || order.customerName}, {order.shippingAddress.street}, {order.shippingAddress.city} {order.shippingAddress.zipCode}
                     </span>
                   </div>
-                </div>
-              )}
+                )}
+                {order.paymentMethod && (
+                  <div className="flex items-center gap-1.5 font-medium text-slate-700">
+                    <Wallet className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>{order.paymentMethod}</span>
+                  </div>
+                )}
+              </div>
             </div>
           ))
         )}

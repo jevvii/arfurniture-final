@@ -3,11 +3,11 @@ import React, { useEffect, useState } from 'react';
 import { 
   Search, Filter, Eye, Truck, CheckCircle, Clock, XCircle, 
   MapPin, Package, Calendar, DollarSign, ChevronDown, ChevronUp,
-  AlertCircle, ArrowUpRight, Trash2
+  AlertCircle, ArrowUpRight, Trash2, Wallet, User as UserIcon
 } from 'lucide-react';
 import { Order, OrderItem } from '../../types';
 import { db } from '../../services/db';
-import { CURRENCY } from '../../constants';
+import { CURRENCY, resolveAssetUrl } from '../../constants';
 
 // Helper for status colors
 const getStatusColor = (status: string) => {
@@ -120,10 +120,16 @@ export const OrderManagement: React.FC = () => {
   // Filter orders
   const filteredOrders = orders.filter(order => {
     const matchesStatus = filterStatus === 'all' || order.status === filterStatus;
+    const q = searchQuery.toLowerCase();
     const matchesSearch = 
-      order._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (order.shippingAddress?.fullName || order.customerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (order.shippingAddress?.email || (order as any).email || '').toLowerCase().includes(searchQuery.toLowerCase());
+      order._id.toLowerCase().includes(q) ||
+      (order.recipientName || '').toLowerCase().includes(q) ||
+      (order.contactNumber || '').toLowerCase().includes(q) ||
+      (order.customerName || '').toLowerCase().includes(q) ||
+      (order.shippingAddress?.fullName || '').toLowerCase().includes(q) ||
+      (order.shippingAddress?.city || '').toLowerCase().includes(q) ||
+      (order.shippingAddress?.street || '').toLowerCase().includes(q) ||
+      (order.shippingAddress?.email || (order as any).email || '').toLowerCase().includes(q);
     
     return matchesStatus && matchesSearch;
   });
@@ -134,7 +140,7 @@ export const OrderManagement: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Order Management</h1>
-          <p className="text-slate-500 text-sm">View and manage customer orders</p>
+          <p className="text-slate-500 text-sm">View, track and fulfill customer orders in real time</p>
         </div>
         
         {/* Filters */}
@@ -143,10 +149,10 @@ export const OrderManagement: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input 
               type="text" 
-              placeholder="Search orders..." 
+              placeholder="Search by order #, recipient, city, or phone..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-64"
+              className="pl-9 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-72 text-sm"
             />
           </div>
           
@@ -155,7 +161,7 @@ export const OrderManagement: React.FC = () => {
             <select 
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="pl-9 pr-8 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none bg-white w-full sm:w-40"
+              className="pl-9 pr-8 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none bg-white w-full sm:w-40 text-sm"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -176,7 +182,7 @@ export const OrderManagement: React.FC = () => {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer / Recipient</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Total</th>
                 <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
@@ -192,14 +198,26 @@ export const OrderManagement: React.FC = () => {
                 filteredOrders.map((order) => (
                   <tr key={order._id} className="hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => openDetails(order)}>
                     <td className="px-6 py-4">
-                      <span className="font-mono text-xs text-slate-500">#{order._id.slice(-6).toUpperCase()}</span>
+                      <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded">#{order._id.slice(-6).toUpperCase()}</span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-slate-900">
-                        {order.shippingAddress?.fullName || order.customerName || 'Guest'}
+                      <div className="font-semibold text-slate-900">
+                        {order.recipientName || order.shippingAddress?.fullName || order.customerName || 'Customer'}
                       </div>
-                      <div className="text-xs text-slate-500">
-                        {order.shippingAddress?.email || (order as any).email || 'No email'}
+                      <div className="text-xs text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
+                        <span>{order.email || (order as any).email || 'No email'}</span>
+                        {order.contactNumber && (
+                          <>
+                            <span>•</span>
+                            <span className="font-mono">{order.contactNumber}</span>
+                          </>
+                        )}
+                        {order.shippingAddress?.city && (
+                          <>
+                            <span>•</span>
+                            <span>{order.shippingAddress.city}</span>
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-slate-600">
@@ -326,7 +344,7 @@ export const OrderManagement: React.FC = () => {
                       {selectedOrder.items.map((item, idx) => (
                         <div key={idx} className="flex gap-4 p-4 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors">
                           <div className="w-20 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200 shrink-0">
-                            <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover" />
+                            <img src={resolveAssetUrl(item.imageUrl)} alt={item.productName} className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1">
                             <div className="flex justify-between items-start">
@@ -373,25 +391,66 @@ export const OrderManagement: React.FC = () => {
                 {/* Right Column - Customer Info */}
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Customer Details</h3>
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Delivery & Customer</h3>
                     <div className="space-y-4">
+                      {/* Recipient */}
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                          <UserIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Recipient</span>
+                          <div className="font-bold text-slate-900">
+                            {selectedOrder.recipientName || selectedOrder.shippingAddress?.fullName || selectedOrder.customerName || 'Guest'}
+                          </div>
+                          {selectedOrder.customerName && selectedOrder.customerName !== selectedOrder.recipientName && (
+                            <div className="text-xs text-slate-500">Account: {selectedOrder.customerName}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Contact Phone */}
+                      <div className="flex gap-3 items-center">
+                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
+                          <span className="font-bold">#</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Phone Number</span>
+                          <div className="text-sm font-mono text-slate-900 font-bold">
+                            {selectedOrder.contactNumber || (selectedOrder as any).phone || 'No phone provided'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Email */}
+                      <div className="flex gap-3 items-center">
+                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
+                          <span className="font-bold">@</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Account Email</span>
+                          <div className="text-sm text-slate-600 break-all font-medium">
+                            {selectedOrder.email || (selectedOrder as any).email || 'No email provided'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Shipping Address */}
                       <div className="flex gap-3">
                         <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
                           <MapPin className="w-5 h-5" />
                         </div>
                         <div>
-                          <div className="font-medium text-slate-900">
-                            {selectedOrder.shippingAddress?.fullName || selectedOrder.customerName || 'Guest'}
-                          </div>
-                          <div className="text-sm text-slate-500 mt-1">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Shipping Address</span>
+                          <div className="text-sm text-slate-700 mt-0.5 leading-snug">
                             {selectedOrder.shippingAddress ? (
                               <>
                                 {selectedOrder.shippingAddress.street}
-                                {selectedOrder.shippingAddress.landmark && <><br />{selectedOrder.shippingAddress.landmark}</>}
+                                {selectedOrder.shippingAddress.landmark && <><br /><span className="text-xs text-slate-500">Note: {selectedOrder.shippingAddress.landmark}</span></>}
                                 <br />
-                                {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.zipCode}
+                                {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zipCode}
                                 <br />
-                                {selectedOrder.shippingAddress.state}, {selectedOrder.shippingAddress.country}
+                                {selectedOrder.shippingAddress.country}
                               </>
                             ) : (
                               <span className="italic text-slate-400">No address provided</span>
@@ -400,21 +459,16 @@ export const OrderManagement: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Payment Method */}
                       <div className="flex gap-3 items-center">
-                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
-                          <span className="font-bold">@</span>
+                        <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                          <Wallet className="w-5 h-5" />
                         </div>
-                        <div className="text-sm text-slate-600 break-all">
-                          {selectedOrder.email || (selectedOrder as any).email || 'No email provided'}
-                        </div>
-                      </div>
-
-                      <div className="flex gap-3 items-center">
-                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 shrink-0">
-                          <span className="font-bold">#</span>
-                        </div>
-                        <div className="text-sm text-slate-600">
-                          {selectedOrder.contactNumber || (selectedOrder as any).phone || 'No phone provided'}
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Payment Method</span>
+                          <div className="text-sm font-bold text-slate-800">
+                            {selectedOrder.paymentMethod || 'Cash on Delivery (COD)'}
+                          </div>
                         </div>
                       </div>
                     </div>

@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Trash2, ArrowRight, CreditCard, MapPin, Plus, Check, X, Phone, User, Home, CheckCircle, Edit, Minus, ChevronDown, Keyboard } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+    Trash2, ArrowRight, CreditCard, MapPin, Plus, Check, X, Phone, User, Home, 
+    CheckCircle, CheckCircle2, Edit, Minus, ChevronDown, Keyboard, Truck, Wallet, 
+    ShieldCheck, ShoppingBag, ArrowLeft, ExternalLink, Sparkles
+} from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Address, CartItem, ProductVariant } from '../../types';
+import { Address, CartItem, ProductVariant, Order } from '../../types';
 import { CURRENCY, resolveAssetUrl } from '../../constants';
 import { db } from '../../services/db';
+import { addAddress } from '../../services/address';
 import { AddressManager } from '../../components/AddressManager';
 import { ColorTintedImage } from '../../components/ColorTintedImage';
 import { PH_PROVINCES, PH_CITIES } from '../../ph-address-data';
@@ -109,12 +114,17 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({ quantity, stock, on
 export const Cart: React.FC = () => {
     const { cart, removeFromCart, clearCart, updateQuantity, updateItemVariant } = useCart();
     const { user, setAuthModalOpen } = useAuth();
+    const navigate = useNavigate();
 
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [editingItem, setEditingItem] = useState<CartItem | null>(null);
     const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
     const [orderSuccess, setOrderSuccess] = useState(false);
+    const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [checkoutStep, setCheckoutStep] = useState<1 | 2>(1);
+    const [paymentMethod, setPaymentMethod] = useState<'cod' | 'gcash' | 'card'>('cod');
+    const [saveAddressToAccount, setSaveAddressToAccount] = useState(true);
 
     const [selectedAddressId, setSelectedAddressId] = useState<string | undefined>(undefined);
     const [useManualEntry, setUseManualEntry] = useState(false);
@@ -154,11 +164,11 @@ export const Cart: React.FC = () => {
                 ...prev,
                 recipientName: user.name || '',
                 contactNumber: user.contactNumber || '',
-                street: '',
-                landmark: '',
-                city: '',
-                state: '',
-                zipCode: '',
+                street: prev.street || '',
+                landmark: prev.landmark || '',
+                city: prev.city || '',
+                state: prev.state || '',
+                zipCode: prev.zipCode || '',
                 country: 'Philippines'
             }));
         }
@@ -200,14 +210,15 @@ export const Cart: React.FC = () => {
     const total = subtotal + tax;
 
     const handleCheckoutClick = () => {
-        if (!user) {
-            setAuthModalOpen(true);
-            return;
-        }
         if (cartItemsToCheckout.length === 0) {
             alert("Please select items to checkout.");
             return;
         }
+        if (!user) {
+            setAuthModalOpen(true);
+            return;
+        }
+        setCheckoutStep(1);
         setIsCheckoutModalOpen(true);
     };
 
@@ -225,6 +236,11 @@ export const Cart: React.FC = () => {
             alert('Contact number must be in the format 09XXXXXXXXX (11 digits, starting with 09).');
             return;
         }
+
+        if (!checkoutForm.street || !checkoutForm.city || !checkoutForm.state || !checkoutForm.zipCode) {
+            alert('Please fill out all required shipping address fields.');
+            return;
+        }
         
         setIsSubmitting(true);
         try {
@@ -240,15 +256,23 @@ export const Cart: React.FC = () => {
                 variantName: item.selectedVariant?.name
             }));
 
-            await db.createOrder({
+            const paymentLabel = paymentMethod === 'cod' 
+                ? 'Cash on Delivery (COD)' 
+                : paymentMethod === 'gcash' 
+                ? 'GCash / E-Wallet' 
+                : 'Credit / Debit Card';
+
+            const createdOrder = await db.createOrder({
                 userId: user._id,
                 customerName: user.name,
                 email: user.email,
                 recipientName: checkoutForm.recipientName,
                 contactNumber: checkoutForm.contactNumber,
+                paymentMethod: paymentLabel,
                 items: orderItems,
                 totalAmount: total,
                 shippingAddress: {
+                    fullName: checkoutForm.recipientName,
                     street: checkoutForm.street,
                     city: checkoutForm.city,
                     state: checkoutForm.state,
@@ -257,13 +281,29 @@ export const Cart: React.FC = () => {
                     landmark: checkoutForm.landmark
                 }
             });
-            cartItemsToCheckout.forEach(item => removeFromCart(item._id, item.selectedVariant?.id));
+
+            // Automatically save address to account if selected
+            if (saveAddressToAccount && user) {
+                try {
+                    await addAddress(user._id, {
+                        street: checkoutForm.street,
+                        city: checkoutForm.city,
+                        state: checkoutForm.state,
+                        zipCode: checkoutForm.zipCode,
+                        country: checkoutForm.country,
+                        landmark: checkoutForm.landmark
+                    });
+                } catch (addrErr) {
+                    console.warn('Could not auto-save address to account:', addrErr);
+                }
+            }
+
+            for (const item of cartItemsToCheckout) {
+                await removeFromCart(item._id, item.selectedVariant?.id);
+            }
             setSelectedItems(new Set());
+            setPlacedOrder(createdOrder);
             setOrderSuccess(true);
-            setTimeout(() => {
-                setOrderSuccess(false);
-                setIsCheckoutModalOpen(false);
-            }, 3000);
         } catch (error: any) {
             console.error('Order creation error:', error);
             const errorMessage = error?.response?.data?.error || error?.message || "Failed to place order. Please try again.";
@@ -388,6 +428,27 @@ export const Cart: React.FC = () => {
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
             <h1 className="text-3xl font-bold text-slate-900 mb-8">Shopping Cart</h1>
+
+            {/* Guest Shopping Prompt (Jakob's Law: Non-intrusive value prop) */}
+            {!user && (
+                <div className="mb-8 bg-gradient-to-r from-indigo-50 via-slate-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+                    <div className="flex items-center gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
+                            <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-slate-900">Shopping as a Guest</h4>
+                            <p className="text-xs text-slate-600 mt-0.5">Sign in to save your cart across devices, access saved shipping addresses, and track delivery progress in real time.</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => setAuthModalOpen(true)}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shrink-0 shadow-md shadow-indigo-200 hover:shadow-indigo-300"
+                    >
+                        Sign In / Register
+                    </button>
+                </div>
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                 <div className="lg:col-span-2">
                     <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-200">
@@ -521,201 +582,494 @@ export const Cart: React.FC = () => {
             </div>
 
             {isCheckoutModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 my-8">
-                        {orderSuccess ? (
-                            <div className="p-12 text-center">
-                                <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
-                                    <CheckCircle className="w-10 h-10" />
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 my-8 border border-slate-100">
+                        {orderSuccess && placedOrder ? (
+                            /* --- Dedicated Order Confirmation Screen (Jakob's Law) --- */
+                            <div className="p-6 sm:p-8">
+                                <div className="text-center max-w-md mx-auto mb-8">
+                                    <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 ring-8 ring-emerald-50">
+                                        <CheckCircle2 className="w-9 h-9" />
+                                    </div>
+                                    <span className="text-xs uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                                        Order Confirmed
+                                    </span>
+                                    <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-3 mb-1">
+                                        Thank You for Your Order!
+                                    </h2>
+                                    <p className="text-sm text-slate-500 font-mono">
+                                        Order Ref: <span className="font-bold text-slate-900 font-mono">#{placedOrder._id.slice(-6).toUpperCase()}</span>
+                                    </p>
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        A confirmation invoice has been sent to <span className="font-semibold text-slate-800">{placedOrder.email || user?.email}</span>.
+                                    </p>
                                 </div>
-                                <h2 className="text-3xl font-bold text-slate-900 mb-2">Order Placed!</h2>
-                                <p className="text-slate-500">Thank you for shopping with ARFurniture.</p>
+
+                                {/* Order Summary Card */}
+                                <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 mb-6 space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-200 text-xs">
+                                        <div>
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">Delivery Recipient</span>
+                                            <p className="font-bold text-slate-800 text-sm">{placedOrder.recipientName}</p>
+                                            <p className="text-slate-500 font-mono mt-0.5">{placedOrder.contactNumber}</p>
+                                        </div>
+                                        <div>
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">Payment Method</span>
+                                            <p className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                                                <Wallet className="w-4 h-4 text-indigo-600" />
+                                                {placedOrder.paymentMethod || 'Cash on Delivery (COD)'}
+                                            </p>
+                                            <span className="text-[11px] text-emerald-600 font-semibold">Payment on delivery</span>
+                                        </div>
+                                    </div>
+
+                                    {placedOrder.shippingAddress && (
+                                        <div className="text-xs pb-4 border-b border-slate-200">
+                                            <span className="text-slate-400 font-bold uppercase tracking-wider block mb-1">Shipping Address</span>
+                                            <p className="text-slate-700 font-medium">
+                                                {placedOrder.shippingAddress.street}
+                                                {placedOrder.shippingAddress.landmark ? `, ${placedOrder.shippingAddress.landmark}` : ''}, {placedOrder.shippingAddress.city}, {placedOrder.shippingAddress.state} {placedOrder.shippingAddress.zipCode}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {/* Line Items Preview */}
+                                    <div>
+                                        <span className="text-slate-400 font-bold uppercase tracking-wider block mb-2 text-xs">Items Ordered ({placedOrder.items?.length || 0})</span>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                            {placedOrder.items?.map((item, idx) => (
+                                                <div key={idx} className="flex items-center justify-between gap-3 text-xs bg-white p-2.5 rounded-xl border border-slate-100">
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <div className="w-10 h-10 rounded-lg bg-slate-100 overflow-hidden shrink-0 border border-slate-100">
+                                                            <img src={resolveAssetUrl(item.imageUrl)} alt={item.productName} className="w-full h-full object-cover" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <p className="font-bold text-slate-800 truncate">{item.productName}</p>
+                                                            <p className="text-slate-400 text-[11px]">
+                                                                {item.variantName ? `Variant: ${item.variantName} • ` : ''}Qty: {item.quantity}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <span className="font-bold text-slate-900 shrink-0">
+                                                        {CURRENCY}{(item.price * item.quantity).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2 flex justify-between items-center text-sm font-black text-slate-900 border-t border-slate-200">
+                                        <span>Total Amount Paid</span>
+                                        <span className="text-lg text-indigo-600">{CURRENCY}{placedOrder.totalAmount.toLocaleString()}</span>
+                                    </div>
+                                </div>
+
+                                {/* Confirmation Actions */}
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <button
+                                        onClick={() => {
+                                            setIsCheckoutModalOpen(false);
+                                            setOrderSuccess(false);
+                                            navigate('/orders');
+                                        }}
+                                        className="flex-1 py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2"
+                                    >
+                                        <ShoppingBag className="w-4 h-4" />
+                                        Track in My Orders
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsCheckoutModalOpen(false);
+                                            setOrderSuccess(false);
+                                            navigate('/');
+                                        }}
+                                        className="py-3.5 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2"
+                                    >
+                                        Continue Shopping
+                                    </button>
+                                </div>
                             </div>
                         ) : (
+                            /* --- Multi-Step Checkout Modal --- */
                             <>
-                                <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-                                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                        <CreditCard className="w-5 h-5 text-indigo-600" /> Checkout Details
-                                    </h2>
-                                    <button onClick={() => setIsCheckoutModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-colors">
+                                {/* Modal Header & Breadcrumb */}
+                                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
+                                            {checkoutStep}/2
+                                        </div>
+                                        <div>
+                                            <h2 className="text-base font-bold text-slate-900">
+                                                {checkoutStep === 1 ? 'Shipping & Contact Details' : 'Payment Method & Review'}
+                                            </h2>
+                                            <p className="text-[11px] text-slate-400">
+                                                {checkoutStep === 1 ? 'Enter your delivery location in the Philippines' : 'Choose how you want to pay upon delivery'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => setIsCheckoutModalOpen(false)} 
+                                        className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition-colors"
+                                    >
                                         <X className="w-5 h-5" />
                                     </button>
                                 </div>
+
                                 <div className="p-6">
-                                    <form id="checkoutForm" onSubmit={handlePlaceOrder} className="space-y-6">
-                                        <div className="space-y-4">
-                                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2">Contact Information</h3>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Recipient Name *</label>
-                                                    <div className="relative">
-                                                        <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                    {checkoutStep === 1 ? (
+                                        <div className="space-y-6">
+                                            {/* Contact Information */}
+                                            <div className="space-y-4">
+                                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
+                                                    1. Recipient Information
+                                                </h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-700 mb-1">Full Name / Recipient *</label>
+                                                        <div className="relative">
+                                                            <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                            <input
+                                                                type="text"
+                                                                required
+                                                                value={checkoutForm.recipientName}
+                                                                onChange={e => setCheckoutForm({ ...checkoutForm, recipientName: e.target.value })}
+                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-medium"
+                                                                placeholder="e.g. Juan Dela Cruz"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-700 mb-1">Philippine Mobile Number *</label>
+                                                        <div className="relative">
+                                                            <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                            <input
+                                                                type="tel"
+                                                                required
+                                                                value={checkoutForm.contactNumber}
+                                                                onChange={e => handleContactNumberChange(e.target.value)}
+                                                                maxLength={11}
+                                                                className={`w-full pl-9 pr-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-mono ${
+                                                                    checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber)
+                                                                        ? 'border-red-300 focus:border-red-500'
+                                                                        : 'border-slate-200 focus:border-indigo-500'
+                                                                }`}
+                                                                placeholder="09XXXXXXXXX"
+                                                            />
+                                                        </div>
+                                                        {checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber) ? (
+                                                            <p className="text-[11px] text-red-500 mt-1">Must be exactly 11 digits starting with 09</p>
+                                                        ) : (
+                                                            <p className="text-[10px] text-slate-400 mt-1">Required for delivery driver coordination</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Shipping Address */}
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                                                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                                                        2. Delivery Address
+                                                    </h3>
+                                                    {user && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setUseManualEntry(!useManualEntry)}
+                                                            className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${
+                                                                useManualEntry ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                                            }`}
+                                                        >
+                                                            {useManualEntry ? <ChevronDown className="w-3 h-3" /> : <Keyboard className="w-3 h-3" />}
+                                                            {useManualEntry ? "Use Saved Address" : "Enter New Address"}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                
+                                                {!useManualEntry && user && (
+                                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <h4 className="text-xs font-bold text-slate-600 uppercase tracking-wider">Select Saved Address</h4>
+                                                            <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-bold">Fast Checkout</span>
+                                                        </div>
+                                                        <AddressManager 
+                                                            userId={user._id}
+                                                            selectedAddressId={selectedAddressId} 
+                                                            onSelectAddress={(addr) => {
+                                                                setSelectedAddressId(addr.id);
+                                                                setCheckoutForm(prev => ({
+                                                                    ...prev,
+                                                                    street: addr.street,
+                                                                    landmark: addr.landmark || '',
+                                                                    city: addr.city,
+                                                                    state: addr.state,
+                                                                    zipCode: addr.zipCode,
+                                                                    country: addr.country
+                                                                }));
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="md:col-span-2">
+                                                        <label className="block text-xs font-bold text-slate-700 mb-1">House / Unit No., Building, Street Name *</label>
+                                                        <div className="relative">
+                                                            <Home className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                            <input
+                                                                type="text"
+                                                                required
+                                                                value={checkoutForm.street}
+                                                                onChange={e => setCheckoutForm({ ...checkoutForm, street: e.target.value })}
+                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                placeholder="e.g. Unit 4B, 123 Mahogany Ave."
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-700 mb-1">Province / Region *</label>
+                                                        {useManualEntry ? (
+                                                            <input
+                                                                type="text"
+                                                                required
+                                                                value={checkoutForm.state}
+                                                                onChange={e => setCheckoutForm({ ...checkoutForm, state: e.target.value })}
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                placeholder="Metro Manila"
+                                                            />
+                                                        ) : (
+                                                            <select
+                                                                required
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
+                                                                value={checkoutForm.state}
+                                                                onChange={e => handleCheckoutProvinceChange(e.target.value)}
+                                                            >
+                                                                <option value="" disabled>Select Province</option>
+                                                                {PH_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                                                            </select>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-700 mb-1">City / Municipality *</label>
+                                                        {useManualEntry || !checkoutForm.state || !PH_CITIES[checkoutForm.state as keyof typeof PH_CITIES] ? (
+                                                            <input
+                                                                type="text"
+                                                                required
+                                                                value={checkoutForm.city}
+                                                                onChange={e => setCheckoutForm({ ...checkoutForm, city: e.target.value })}
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                placeholder="City / Municipality"
+                                                            />
+                                                        ) : (
+                                                            <select
+                                                                required
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
+                                                                value={checkoutForm.city}
+                                                                onChange={e => setCheckoutForm({ ...checkoutForm, city: e.target.value })}
+                                                            >
+                                                                <option value="" disabled>Select City</option>
+                                                                {PH_CITIES[checkoutForm.state as keyof typeof PH_CITIES].map(c => <option key={c} value={c}>{c}</option>)}
+                                                            </select>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-700 mb-1">Landmark / Notes (Optional)</label>
+                                                        <div className="relative">
+                                                            <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                                                            <input
+                                                                type="text"
+                                                                value={checkoutForm.landmark}
+                                                                onChange={e => setCheckoutForm({ ...checkoutForm, landmark: e.target.value })}
+                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                placeholder="Near Barangay Hall or Gate 2"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-xs font-bold text-slate-700 mb-1">ZIP / Postal Code *</label>
                                                         <input
                                                             type="text"
                                                             required
-                                                            value={checkoutForm.recipientName}
-                                                            onChange={e => setCheckoutForm({ ...checkoutForm, recipientName: e.target.value })}
-                                                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
-                                                            placeholder="Juan Dela Cruz"
+                                                            value={checkoutForm.zipCode}
+                                                            onChange={e => setCheckoutForm({ ...checkoutForm, zipCode: e.target.value })}
+                                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-mono"
+                                                            placeholder="e.g. 1000"
                                                         />
                                                     </div>
                                                 </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Contact Number *</label>
-                                                    <div className="relative">
-                                                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+
+                                                {/* Auto-save address checkbox */}
+                                                {user && (useManualEntry || !selectedAddressId) && (
+                                                    <label className="flex items-center gap-2 cursor-pointer pt-2 select-none">
                                                         <input
-                                                            type="tel"
-                                                            required
-                                                            value={checkoutForm.contactNumber}
-                                                            onChange={e => handleContactNumberChange(e.target.value)}
-                                                            maxLength={11}
-                                                            className={`w-full pl-9 pr-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm ${
-                                                                checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber)
-                                                                    ? 'border-red-300 focus:border-red-500'
-                                                                    : 'border-slate-200 focus:border-indigo-500'
-                                                            }`}
-                                                            placeholder="09171234567"
+                                                            type="checkbox"
+                                                            checked={saveAddressToAccount}
+                                                            onChange={e => setSaveAddressToAccount(e.target.checked)}
+                                                            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
                                                         />
-                                                    </div>
-                                                    {checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber) && (
-                                                        <p className="text-xs text-red-500 mt-1">Must be 11 digits starting with 09</p>
-                                                    )}
-                                                </div>
+                                                        <span className="text-xs font-medium text-slate-600">
+                                                            Save this address to my account for faster future checkout
+                                                        </span>
+                                                    </label>
+                                                )}
                                             </div>
-                                        </div>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-4">
-                                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Shipping Address</h3>
+
+                                            <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setIsCheckoutModalOpen(false)} 
+                                                    className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors"
+                                                >
+                                                    Cancel
+                                                </button>
                                                 <button 
                                                     type="button"
-                                                    onClick={() => setUseManualEntry(!useManualEntry)}
-                                                    className={`px-3 py-1 rounded-lg transition-all flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider ${useManualEntry ? 'bg-amber-50 text-amber-600 border border-amber-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}`}
+                                                    onClick={() => {
+                                                        if (!checkoutForm.recipientName.trim()) {
+                                                            alert('Please enter recipient name.');
+                                                            return;
+                                                        }
+                                                        if (!validatePhoneNumber(checkoutForm.contactNumber)) {
+                                                            alert('Please enter a valid 11-digit mobile number starting with 09.');
+                                                            return;
+                                                        }
+                                                        if (!checkoutForm.street || !checkoutForm.city || !checkoutForm.state || !checkoutForm.zipCode) {
+                                                            alert('Please fill out all required shipping address fields.');
+                                                            return;
+                                                        }
+                                                        setCheckoutStep(2);
+                                                    }}
+                                                    className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-2 shadow-md shadow-indigo-600/20"
                                                 >
-                                                    {useManualEntry ? <ChevronDown className="w-3 h-3" /> : <Keyboard className="w-3 h-3" />}
-                                                    {useManualEntry ? "Use Saved" : "Enter Manually"}
+                                                    Proceed to Payment & Review <ArrowRight className="w-4 h-4" />
                                                 </button>
                                             </div>
-                                            
-                                            {!useManualEntry && user && (
-                                                <div className="mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Saved Addresses</h4>
-                                                        <span className="text-[10px] text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full font-bold">Fast Checkout</span>
-                                                    </div>
-                                                    <AddressManager 
-                                                        userId={user._id}
-                                                        selectedAddressId={selectedAddressId} 
-                                                        onSelectAddress={(addr) => {
-                                                            setSelectedAddressId(addr.id);
-                                                            setCheckoutForm(prev => ({
-                                                                ...prev,
-                                                                street: addr.street,
-                                                                landmark: addr.landmark || '',
-                                                                city: addr.city,
-                                                                state: addr.state,
-                                                                zipCode: addr.zipCode,
-                                                                country: addr.country
-                                                            }));
-                                                        }}
-                                                    />
+                                        </div>
+                                    ) : (
+                                        /* Step 2: Payment & Final Review */
+                                        <form id="checkoutForm" onSubmit={handlePlaceOrder} className="space-y-6">
+                                            {/* Shipping Review Summary Card */}
+                                            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex justify-between items-start gap-4">
+                                                <div className="space-y-1 text-xs">
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">Deliver To</span>
+                                                    <p className="font-bold text-slate-800 text-sm">{checkoutForm.recipientName} • <span className="font-mono text-slate-600 font-normal">{checkoutForm.contactNumber}</span></p>
+                                                    <p className="text-slate-600 text-xs">
+                                                        {checkoutForm.street}{checkoutForm.landmark ? `, ${checkoutForm.landmark}` : ''}, {checkoutForm.city}, {checkoutForm.state} {checkoutForm.zipCode}
+                                                    </p>
                                                 </div>
-                                            )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCheckoutStep(1)}
+                                                    className="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline shrink-0"
+                                                >
+                                                    Change
+                                                </button>
+                                            </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div className="md:col-span-2">
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Street *</label>
-                                                    <div className="relative">
-                                                        <Home className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                        <input
-                                                            type="text"
-                                                            required
-                                                            value={checkoutForm.street}
-                                                            onChange={e => setCheckoutForm({ ...checkoutForm, street: e.target.value })}
-                                                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
-                                                            placeholder="123 Gen. T. de Leon St."
-                                                        />
+                                            {/* Payment Options (Jakob's Law) */}
+                                            <div className="space-y-3">
+                                                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
+                                                    Payment Method
+                                                </h3>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    <div 
+                                                        onClick={() => setPaymentMethod('cod')}
+                                                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                                                            paymentMethod === 'cod' 
+                                                                ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20' 
+                                                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <Truck className={`w-5 h-5 ${paymentMethod === 'cod' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                                                            {paymentMethod === 'cod' && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-900 text-xs">Cash on Delivery</h4>
+                                                        <p className="text-[11px] text-slate-500 mt-0.5">Pay in cash upon inspection</p>
                                                     </div>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Province/State *</label>
-                                                    {useManualEntry ? (
-                                                        <input
-                                                            type="text"
-                                                            required
-                                                            value={checkoutForm.state}
-                                                            onChange={e => setCheckoutForm({ ...checkoutForm, state: e.target.value })}
-                                                            className="w-full pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
-                                                            placeholder="Metro Manila"
-                                                        />
-                                                    ) : (
-                                                        <select
-                                                            required
-                                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
-                                                            value={checkoutForm.state}
-                                                            onChange={e => handleCheckoutProvinceChange(e.target.value)}
-                                                        >
-                                                            <option value="" disabled>Select Province</option>
-                                                            {PH_PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-                                                        </select>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">City *</label>
-                                                    {useManualEntry || !checkoutForm.state || !PH_CITIES[checkoutForm.state as keyof typeof PH_CITIES] ? (
-                                                        <input
-                                                            type="text"
-                                                            required
-                                                            value={checkoutForm.city}
-                                                            onChange={e => setCheckoutForm({ ...checkoutForm, city: e.target.value })}
-                                                            className="w-full pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
-                                                            placeholder="City"
-                                                        />
-                                                    ) : (
-                                                        <select
-                                                            required
-                                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
-                                                            value={checkoutForm.city}
-                                                            onChange={e => setCheckoutForm({ ...checkoutForm, city: e.target.value })}
-                                                        >
-                                                            <option value="" disabled>Select City</option>
-                                                            {PH_CITIES[checkoutForm.state as keyof typeof PH_CITIES].map(c => <option key={c} value={c}>{c}</option>)}
-                                                        </select>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">Landmark</label>
-                                                    <div className="relative">
-                                                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                                                        <input
-                                                            type="text"
-                                                            value={checkoutForm.landmark}
-                                                            onChange={e => setCheckoutForm({ ...checkoutForm, landmark: e.target.value })}
-                                                            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
-                                                            placeholder="Near City Hall"
-                                                        />
+
+                                                    <div 
+                                                        onClick={() => setPaymentMethod('gcash')}
+                                                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                                                            paymentMethod === 'gcash' 
+                                                                ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20' 
+                                                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <Wallet className={`w-5 h-5 ${paymentMethod === 'gcash' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                                                            {paymentMethod === 'gcash' && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-900 text-xs">GCash / Maya</h4>
+                                                        <p className="text-[11px] text-slate-500 mt-0.5">Scan QR / E-Wallet on delivery</p>
                                                     </div>
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs font-bold text-slate-500 mb-1">ZIP Code *</label>
-                                                    <input
-                                                        type="text"
-                                                        required
-                                                        value={checkoutForm.zipCode}
-                                                        onChange={e => setCheckoutForm({ ...checkoutForm, zipCode: e.target.value })}
-                                                        className="w-full pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
-                                                        placeholder="1442"
-                                                    />
+
+                                                    <div 
+                                                        onClick={() => setPaymentMethod('card')}
+                                                        className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all ${
+                                                            paymentMethod === 'card' 
+                                                                ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20' 
+                                                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <CreditCard className={`w-5 h-5 ${paymentMethod === 'card' ? 'text-indigo-600' : 'text-slate-400'}`} />
+                                                            {paymentMethod === 'card' && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
+                                                        </div>
+                                                        <h4 className="font-bold text-slate-900 text-xs">Credit / Debit Card</h4>
+                                                        <p className="text-[11px] text-slate-500 mt-0.5">POS terminal on delivery</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                                            <button type="button" onClick={() => setIsCheckoutModalOpen(false)} className="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">Cancel</button>
-                                            <button type="submit" form="checkoutForm" disabled={isSubmitting} className="px-4 py-2 rounded-lg bg-indigo-600 text-white font-bold hover:bg-indigo-700 disabled:opacity-50">
-                                                {isSubmitting ? 'Placing Order...' : 'Place Order'}
-                                            </button>
-                                        </div>
-                                    </form>
+
+                                            {/* Order Line Breakdown */}
+                                            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2 text-xs">
+                                                <div className="flex justify-between text-slate-600">
+                                                    <span>Items Total ({cartItemsToCheckout.length})</span>
+                                                    <span>{CURRENCY}{subtotal.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between text-slate-600">
+                                                    <span>VAT (12% Included)</span>
+                                                    <span>{CURRENCY}{tax.toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between text-slate-600">
+                                                    <span>Delivery Fee</span>
+                                                    <span className="text-emerald-600 font-bold">Free Nationwide Delivery</span>
+                                                </div>
+                                                <div className="border-t border-slate-200 pt-2 flex justify-between text-base font-extrabold text-slate-900">
+                                                    <span>Amount to Pay</span>
+                                                    <span className="text-indigo-600 font-black">{CURRENCY}{total.toLocaleString()}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => setCheckoutStep(1)} 
+                                                    className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5"
+                                                >
+                                                    <ArrowLeft className="w-4 h-4" /> Back to Shipping
+                                                </button>
+                                                <button 
+                                                    type="submit" 
+                                                    form="checkoutForm" 
+                                                    disabled={isSubmitting} 
+                                                    className="px-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm transition-all shadow-lg shadow-indigo-600/30 disabled:opacity-50 flex items-center gap-2"
+                                                >
+                                                    {isSubmitting ? (
+                                                        <>
+                                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                            <span>Placing Order...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ShieldCheck className="w-4 h-4" />
+                                                            <span>Confirm & Place Order ({CURRENCY}{total.toLocaleString()})</span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    )}
                                 </div>
                             </>
                         )}
