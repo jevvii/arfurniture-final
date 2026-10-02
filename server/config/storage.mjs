@@ -181,11 +181,11 @@ class StorjSupabaseCompatClient {
 }
 
 export const initializeSupabase = () => {
-  const storageProvider = (process.env.STORAGE_PROVIDER || 'storj').toLowerCase()
+  const storageProvider = (process.env.STORAGE_PROVIDER || (process.env.SUPABASE_URL ? 'supabase' : 'storj')).toLowerCase()
   BUCKET_NAME =
     process.env.STORAGE_BUCKET ||
-    process.env.STORJ_BUCKET ||
     process.env.SUPABASE_STORAGE_BUCKET ||
+    process.env.STORJ_BUCKET ||
     BUCKET_NAME
 
   if (storageProvider === 'supabase') {
