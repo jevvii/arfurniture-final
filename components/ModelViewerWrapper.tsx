@@ -85,22 +85,25 @@ export const ModelViewerWrapper: React.FC<ModelViewerProps> = ({ src, poster, al
         src={src}
         poster={poster}
         alt={alt}
-        shadow-intensity="1.5"
-        shadow-softness="1"
+        shadow-intensity="1.8"
+        shadow-softness="0.75"
         camera-controls
         auto-rotate
         ar
-        ar-modes="webxr scene-viewer quick-look"
+        ar-modes="scene-viewer webxr quick-look"
+        quick-look-browsers="safari chrome"
         ar-placement="floor"
         ar-scale="fixed"
         environment-image="neutral"
-        exposure="1"
+        exposure="1.1"
         loading="eager"
         reveal="auto"
+        interpolation-decay="200"
+        interaction-prompt="none"
+        touch-action="pan-y"
         camera-orbit="0deg 75deg 105%"
         min-camera-orbit="auto auto auto"
         max-camera-orbit="auto auto 150%"
-        interaction-prompt="auto"
         className="w-full h-full"
         style={{ width: '100%', height: '100%' }}
       >

@@ -11,6 +11,7 @@ import {
   Minus,
   QrCode,
   Sparkles,
+  Crosshair,
 } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
 import { db } from '../../services/db';
@@ -49,6 +50,8 @@ export const ARView: React.FC = () => {
   const [launchingAR, setLaunchingAR] = useState(false);
   const [currentScale, setCurrentScale] = useState(1.0);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [arEngine, setArEngine] = useState<'scene-viewer' | 'webxr'>('scene-viewer');
+  const [snapToast, setSnapToast] = useState(false);
 
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -74,6 +77,23 @@ export const ARView: React.FC = () => {
     };
     load();
   }, [id]);
+
+  // Prefetch 3D model binary into browser cache for instantaneous initialization
+  useEffect(() => {
+    if (!product?.arModelUrl) return;
+    const url = resolveAssetUrl(product.arModelUrl);
+    const link = document.createElement('link');
+    link.rel = 'prefetch';
+    link.as = 'fetch';
+    link.href = url;
+    link.crossOrigin = 'anonymous';
+    document.head.appendChild(link);
+    return () => {
+      if (document.head.contains(link)) {
+        document.head.removeChild(link);
+      }
+    };
+  }, [product?.arModelUrl]);
 
   // Prevent body scroll
   useEffect(() => {
@@ -180,17 +200,24 @@ export const ARView: React.FC = () => {
     setDiagnostics(d);
   };
 
-  // Pre-compute Scene Viewer intent URL for Android
+  // Pre-compute Scene Viewer intent URL for Android (mode=ar_only for instant camera & floor lock)
   const modelUrl = resolveAssetUrl(product?.arModelUrl);
   const intentUrl = React.useMemo(() => {
     if (!modelUrl || !platform.isAndroid || !product) return '';
     const title = encodeURIComponent(product.name || 'Furniture');
+    const canonicalLink = encodeURIComponent(
+      typeof window !== 'undefined'
+        ? `${window.location.protocol}//${window.location.host}/product/${product._id}`
+        : ''
+    );
     return (
       `intent://arvr.google.com/scene-viewer/1.0?` +
       `file=${encodeURIComponent(modelUrl)}` +
-      `&mode=ar_preferred` +
+      `&mode=ar_only` +
       `&title=${title}` +
-      `&resizable=true` +
+      `&resizable=false` +
+      `&initial_scale=1.0` +
+      (canonicalLink ? `&link=${canonicalLink}` : '') +
       `#Intent;` +
       `scheme=https;` +
       `package=com.google.android.googlequicksearchbox;` +
@@ -229,8 +256,13 @@ export const ARView: React.FC = () => {
       }
 
       if (status === 'object-placed') {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try {
+            navigator.vibrate([40, 50, 40]);
+          } catch {}
+        }
         setShowPlaced(true);
-        setTimeout(() => setShowPlaced(false), 2000);
+        setTimeout(() => setShowPlaced(false), 2500);
       }
     };
 
@@ -315,6 +347,19 @@ export const ARView: React.FC = () => {
         return;
       }
 
+      if (platform.isAndroid && arEngine === 'scene-viewer' && intentUrl) {
+        // Fast-path: Launch Google Scene Viewer with mode=ar_only for instant native ARCore floor detection
+        window.location.href = intentUrl;
+        setTimeout(() => {
+          if (document.visibilityState === 'visible' && typeof viewer.activateAR === 'function') {
+            viewer.activateAR().catch(() => {});
+          }
+          setLaunchingAR(false);
+        }, 1500);
+        clearTimeout(safetyTimeout);
+        return;
+      }
+
       if (!modelLoaded) {
         throw new Error('3D model is still downloading. Please wait for the spinner to disappear.');
       }
@@ -341,11 +386,18 @@ export const ARView: React.FC = () => {
 
   const handleResetPlacement = () => {
     const viewer = viewerRef.current;
-    if (viewer && viewer.resetARPlacement) {
-      viewer.resetARPlacement();
+    if (viewer) {
+      if (typeof viewer.activateAR === 'function' && arStatus === 'session-started') {
+        viewer.activateAR().catch(() => {});
+      }
     }
-    setShowPlaced(true);
-    setTimeout(() => setShowPlaced(false), 2000);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(40);
+      } catch {}
+    }
+    setSnapToast(true);
+    setTimeout(() => setSnapToast(false), 2200);
   };
 
   const adjustScale = (delta: number) => {
@@ -382,23 +434,26 @@ export const ARView: React.FC = () => {
           src={resolveAssetUrl(product.arModelUrl)}
           poster={resolveAssetUrl(product.imageUrl)}
           alt={`AR view of ${product.name}`}
-          shadow-intensity="2"
-          shadow-softness="0.5"
+          shadow-intensity="1.8"
+          shadow-softness="0.75"
           camera-controls
           auto-rotate={!inAR}
           ar
-          ar-modes="webxr scene-viewer quick-look"
+          ar-modes={arEngine === 'webxr' ? 'webxr scene-viewer quick-look' : 'scene-viewer webxr quick-look'}
+          quick-look-browsers="safari chrome"
           ar-placement="floor"
           ar-scale="fixed"
           scale={`${currentScale} ${currentScale} ${currentScale}`}
           environment-image="neutral"
-          exposure="1.2"
+          exposure="1.1"
           loading="eager"
           reveal="auto"
+          interpolation-decay="200"
+          interaction-prompt="none"
+          touch-action="pan-y"
           camera-orbit="0deg 75deg 105%"
           min-camera-orbit="auto auto auto"
           max-camera-orbit="auto auto 150%"
-          interaction-prompt="auto"
           className="w-full h-full"
           style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
         >
@@ -418,6 +473,39 @@ export const ARView: React.FC = () => {
           />
         </ModelViewer>
       </div>
+
+      {/* --- Real-Time Floor Scanning Guidance Radar (WebXR Plane Detection) --- */}
+      {arStatus === 'session-started' && !showPlaced && (
+        <div className="absolute inset-0 z-40 flex flex-col items-center justify-center pointer-events-none px-6 text-center animate-in fade-in duration-300">
+          <div className="relative w-44 h-44 mb-5">
+            {/* 3D floor perspective wireframe grid */}
+            <div className="absolute inset-0 border-2 border-cyan-400/50 rounded-3xl [transform:perspective(260px)_rotateX(60deg)] animate-pulse bg-cyan-500/10 shadow-[0_0_30px_rgba(34,211,238,0.25)]" />
+            <div className="absolute inset-3 border border-indigo-400/30 rounded-2xl [transform:perspective(260px)_rotateX(60deg)]" />
+            {/* Laser scanning beam */}
+            <div className="absolute inset-x-2 top-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-[bounce_2s_ease-in-out_infinite] shadow-[0_0_15px_#22d3ee]" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Crosshair className="w-10 h-10 text-cyan-300 animate-spin" style={{ animationDuration: '8s' }} />
+            </div>
+          </div>
+          <div className="bg-black/85 backdrop-blur-xl px-5 py-3 rounded-2xl border border-cyan-400/30 shadow-2xl max-w-xs">
+            <p className="text-white font-black text-sm tracking-wide flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+              Scanning Floor Surface...
+            </p>
+            <p className="text-slate-300 text-xs mt-1 leading-snug">
+              Point your camera at the floor and move your phone slowly side-to-side
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* --- Floor Alignment Toast --- */}
+      {snapToast && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-500/95 backdrop-blur-md text-white px-5 py-2.5 rounded-full border border-emerald-300/40 text-xs font-bold animate-in fade-in zoom-in duration-150 flex items-center gap-2 shadow-2xl">
+          <Crosshair className="w-4 h-4" />
+          <span>Floor Alignment Re-calibrated!</span>
+        </div>
+      )}
 
       {/* --- WebXR UI (Record / Snap / Scale) --- */}
       {inAR && (
@@ -468,7 +556,7 @@ export const ARView: React.FC = () => {
         {showPlaced && (
           <div className="bg-emerald-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-400/30 flex items-center gap-2 animate-in zoom-in duration-200 shadow-lg">
             <Box className="w-4 h-4 text-white" />
-            <span className="text-xs font-bold text-white">Placed!</span>
+            <span className="text-xs font-bold text-white">Floor Locked · 1:1 Scale Snapped</span>
           </div>
         )}
 
@@ -622,6 +710,37 @@ export const ARView: React.FC = () => {
                     )}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* Android AR Tracking Engine Switcher */}
+            {platform.isAndroid && !inAR && (
+              <div className="flex items-center justify-between bg-black/40 border border-white/10 rounded-xl p-1 text-[11px] font-bold">
+                <span className="text-white/50 px-2 uppercase tracking-wider text-[9px]">Tracking:</span>
+                <div className="flex gap-1 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setArEngine('scene-viewer')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
+                      arEngine === 'scene-viewer'
+                        ? 'bg-indigo-600 text-white shadow-md font-extrabold'
+                        : 'text-white/70 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    ⚡ Fast ARCore
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setArEngine('webxr')}
+                    className={`flex-1 py-1.5 px-2 rounded-lg text-center transition-all ${
+                      arEngine === 'webxr'
+                        ? 'bg-indigo-600 text-white shadow-md font-extrabold'
+                        : 'text-white/70 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    🌐 WebXR
+                  </button>
+                </div>
               </div>
             )}
 

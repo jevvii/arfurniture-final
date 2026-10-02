@@ -95,6 +95,24 @@ export const ProductDetail: React.FC = () => {
     loadData();
   }, [id]);
 
+  // Prefetch 3D model binary into browser cache for instant AR launch
+  useEffect(() => {
+    if (product?.arModelUrl) {
+      const url = resolveAssetUrl(product.arModelUrl);
+      const link = document.createElement('link');
+      link.rel = 'prefetch';
+      link.as = 'fetch';
+      link.href = url;
+      link.crossOrigin = 'anonymous';
+      document.head.appendChild(link);
+      return () => {
+        if (document.head.contains(link)) {
+          document.head.removeChild(link);
+        }
+      };
+    }
+  }, [product?.arModelUrl]);
+
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product || !chatQuestion.trim()) return;
