@@ -12,11 +12,7 @@ let supabaseClient = null
 let BUCKET_NAME = 'arfurniture'
 
 export const getBucketName = () => {
-  // If not initialized yet, try to read from env now
-  if (BUCKET_NAME === 'arfurniture') {
-     BUCKET_NAME = process.env.STORAGE_BUCKET || process.env.STORJ_BUCKET || process.env.SUPABASE_STORAGE_BUCKET || 'arfurniture';
-  }
-  return BUCKET_NAME;
+  return process.env.SUPABASE_STORAGE_BUCKET || process.env.STORAGE_BUCKET || process.env.STORJ_BUCKET || BUCKET_NAME || 'arfurniture';
 }
 
 const toErrorPayload = (error) => ({
@@ -181,12 +177,15 @@ class StorjSupabaseCompatClient {
 }
 
 export const initializeSupabase = () => {
-  const storageProvider = (process.env.STORAGE_PROVIDER || (process.env.SUPABASE_URL ? 'supabase' : 'storj')).toLowerCase()
+  let storageProvider = (process.env.STORAGE_PROVIDER || 'supabase').toLowerCase()
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    storageProvider = 'supabase'
+  }
   BUCKET_NAME =
-    process.env.STORAGE_BUCKET ||
     process.env.SUPABASE_STORAGE_BUCKET ||
+    process.env.STORAGE_BUCKET ||
     process.env.STORJ_BUCKET ||
-    BUCKET_NAME
+    'arfurniture'
 
   if (storageProvider === 'supabase') {
     const url = process.env.SUPABASE_URL
