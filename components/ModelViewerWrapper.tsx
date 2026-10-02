@@ -106,7 +106,7 @@ export const ModelViewerWrapper: React.FC<ModelViewerProps> = ({ src, poster, al
       >
         <button
           onClick={onARClick}
-          className="absolute top-4 right-4 bg-indigo-600 text-white px-5 py-2.5 rounded-full font-bold shadow-2xl cursor-pointer hover:bg-indigo-700 transition-all flex items-center gap-2 z-30 active:scale-95 border-none outline-none"
+          className="absolute bottom-4 right-4 bg-indigo-600 text-white px-5 py-2.5 rounded-full font-bold shadow-2xl cursor-pointer hover:bg-indigo-700 transition-all flex items-center gap-2 z-30 active:scale-95 border-none outline-none"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
           <span className="text-sm font-bold">View in AR</span>

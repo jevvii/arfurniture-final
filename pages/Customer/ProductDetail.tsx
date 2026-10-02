@@ -177,15 +177,21 @@ export const ProductDetail: React.FC = () => {
             <div className="bg-white p-1 rounded-full shadow-md border border-slate-200 flex gap-0.5 scale-90 sm:scale-100">
               <button
                 onClick={() => setViewMode('image')}
-                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewMode === 'image' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-50'}`}
+                className={`px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewMode === 'image' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
               >
                 <ImageIcon className="w-3.5 h-3.5" /> Image
               </button>
               <button
                 onClick={() => setViewMode('3d')}
-                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewMode === '3d' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-50'}`}
+                className={`px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 ${viewMode === '3d' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
               >
                 <Box className="w-3.5 h-3.5" /> 3D View
+              </button>
+              <button
+                onClick={() => isMobile ? navigate(`/ar/${product._id}`) : setIsQRModalOpen(true)}
+                className="px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md hover:from-indigo-500 hover:to-violet-500 active:scale-95"
+              >
+                <Smartphone className="w-3.5 h-3.5" /> View in AR
               </button>
             </div>
           </div>
