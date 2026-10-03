@@ -39,6 +39,7 @@ export interface Product {
   imageUrl: string; // Thumbnail/2D image
   images?: string[]; // Array of additional images
   arModelUrl: string; // .glb or .gltf URL
+  usdzUrl?: string; // .usdz URL for iOS QuickLook AR
   dimensions: Dimensions;
   isFeatured?: boolean;
   isNewArrival?: boolean;
@@ -57,6 +58,7 @@ export interface ProductVariant {
   // Optional: if provided, use dedicated asset; otherwise tint the base product asset
   imageUrl?: string;
   arModelUrl?: string;
+  usdzUrl?: string; // .usdz URL for iOS QuickLook AR
 }
 
 export interface CartItem extends Product {

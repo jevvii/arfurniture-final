@@ -169,6 +169,7 @@ export const ProductDetail: React.FC = () => {
               <div className="w-full h-full animate-in fade-in duration-500">
                 <ModelViewerWrapper
                   src={resolveAssetUrl(product.arModelUrl)}
+                  iosSrc={product.usdzUrl ? resolveAssetUrl(product.usdzUrl) : undefined}
                   poster={activeImage}
                   alt={`3D model of ${product.name}`}
                   color={selectedVariant?.color || product.color}

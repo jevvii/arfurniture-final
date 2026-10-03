@@ -52,6 +52,7 @@ export const ARView: React.FC = () => {
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [arEngine, setArEngine] = useState<'scene-viewer' | 'webxr'>('scene-viewer');
   const [snapToast, setSnapToast] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -202,6 +203,7 @@ export const ARView: React.FC = () => {
 
   // Pre-compute Scene Viewer intent URL for Android (mode=ar_only for instant camera & floor lock)
   const modelUrl = resolveAssetUrl(product?.arModelUrl);
+  const usdzUrl = product?.usdzUrl ? resolveAssetUrl(product.usdzUrl) : undefined;
   const intentUrl = React.useMemo(() => {
     if (!modelUrl || !platform.isAndroid || !product) return '';
     const title = encodeURIComponent(product.name || 'Furniture');
@@ -226,22 +228,31 @@ export const ARView: React.FC = () => {
     );
   }, [modelUrl, platform.isAndroid, product]);
 
-  // Listen for model load and AR status
+  // Listen for model load, download progress, and AR status
   useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer) return;
 
+    setDownloadProgress(0);
+
+    const handleProgress = (e: any) => {
+      const p = e.detail?.totalProgress ?? 0;
+      setDownloadProgress(Math.min(99, Math.round(p * 100)));
+    };
+
     const handleLoad = () => {
       setModelLoaded(true);
       setModelError(null);
+      setDownloadProgress(100);
       applyColor();
       updateDiagnostics();
     };
 
     const handleError = (e: any) => {
-      console.error('Model Viewer error:', e);
-      setModelError('Failed to load 3D model. Please check your connection or the file path.');
+      console.error('Model Viewer error on src:', modelUrl, e);
+      setModelError('Failed to load 3D model. Please check your connection or try again.');
       setModelLoaded(false);
+      setDownloadProgress(0);
       updateDiagnostics();
     };
 
@@ -266,17 +277,20 @@ export const ARView: React.FC = () => {
       }
     };
 
+    viewer.addEventListener('progress', handleProgress);
     viewer.addEventListener('load', handleLoad);
     viewer.addEventListener('error', handleError);
     viewer.addEventListener('ar-status', handleArStatus);
 
     if (viewer.model) {
        setModelLoaded(true);
+       setDownloadProgress(100);
        applyColor();
     }
     updateDiagnostics();
 
     return () => {
+      viewer.removeEventListener('progress', handleProgress);
       viewer.removeEventListener('load', handleLoad);
       viewer.removeEventListener('error', handleError);
       viewer.removeEventListener('ar-status', handleArStatus);
@@ -338,7 +352,13 @@ export const ARView: React.FC = () => {
       }
 
       if (platform.isIOS) {
-        if (arButtonRef.current) {
+        if (typeof viewer.activateAR === 'function') {
+          try {
+            await viewer.activateAR();
+          } catch (e) {
+            arButtonRef.current?.click();
+          }
+        } else if (arButtonRef.current) {
           arButtonRef.current.click();
         } else {
           throw new Error('AR button not found.');
@@ -431,7 +451,8 @@ export const ARView: React.FC = () => {
       <div className="absolute inset-0 w-full h-full">
         <ModelViewer
           ref={viewerRef}
-          src={resolveAssetUrl(product.arModelUrl)}
+          src={modelUrl}
+          ios-src={usdzUrl}
           poster={resolveAssetUrl(product.imageUrl)}
           alt={`AR view of ${product.name}`}
           shadow-intensity="1.8"
@@ -454,14 +475,22 @@ export const ARView: React.FC = () => {
           camera-orbit="0deg 75deg 105%"
           min-camera-orbit="auto auto auto"
           max-camera-orbit="auto auto 150%"
+          crossorigin="anonymous"
           className="w-full h-full"
           style={{ width: '100%', height: '100%', backgroundColor: 'transparent' }}
         >
-          {/* Poster slot */}
-          <div slot="poster" className="w-full h-full flex items-center justify-center bg-black">
-            <div className="text-center">
-              <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-sm text-slate-400 font-bold">Loading 3D model...</p>
+          {/* Poster slot with active download progress */}
+          <div slot="poster" className="w-full h-full flex items-center justify-center bg-black/90">
+            <div className="text-center p-6 bg-slate-900/85 backdrop-blur-md rounded-2xl border border-white/10 max-w-xs mx-4 shadow-2xl">
+              <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-sm text-white font-bold uppercase tracking-wider mb-2">Loading 3D Model</p>
+              <div className="w-40 h-2 bg-slate-800 rounded-full overflow-hidden mx-auto mb-1.5">
+                <div
+                  className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full transition-all duration-200"
+                  style={{ width: `${Math.max(8, downloadProgress)}%` }}
+                />
+              </div>
+              <span className="text-xs font-mono font-medium text-slate-400">{downloadProgress}%</span>
             </div>
           </div>
 

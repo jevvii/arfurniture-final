@@ -41,8 +41,12 @@ export const getApiBaseUrl = (): string => {
   return 'http://localhost:4000';
 };
 
-// Resolve asset URLs to work from any host (localhost, LAN IP, or tunnel)
-// Handles relative paths, absolute URLs, and localhost URLs
+// Public Supabase Storage CDN Base URL (Direct Cloudflare Edge Delivery)
+export const SUPABASE_STORAGE_PUBLIC_BASE = 'https://xnntcdrctbcuapnbamtp.supabase.co/storage/v1/object/public/arfurniture';
+
+// Resolve asset URLs to direct public CDN endpoints
+// Bypasses Vercel serverless function overhead, eliminates 302 redirects (which break Google Scene Viewer),
+// and enables direct byte-range streaming for WebXR and Apple QuickLook USDZ
 export const resolveAssetUrl = (url: string | undefined): string => {
   if (!url) return '';
   
@@ -51,13 +55,22 @@ export const resolveAssetUrl = (url: string | undefined): string => {
     return url;
   }
   
-  // For relative paths, resolve against the API server
+  // Directly route /api/assets/* to public Supabase Storage CDN
+  if (url.startsWith('/api/assets/')) {
+    const cleanKey = url.replace(/^\/api\/assets\//, '');
+    return `${SUPABASE_STORAGE_PUBLIC_BASE}/${cleanKey}`;
+  }
+
+  // Directly route local public asset prefixes to Supabase CDN
+  if (url.startsWith('products/') || url.startsWith('/products/') || 
+      url.startsWith('banners/') || url.startsWith('/banners/')) {
+    const cleanKey = url.replace(/^\/+/, '');
+    return `${SUPABASE_STORAGE_PUBLIC_BASE}/${cleanKey}`;
+  }
+
+  // For relative API routes, resolve against the API server
   const apiBase = getApiBaseUrl();
-  
-  // Ensure path starts with /
   const path = url.startsWith('/') ? url : `/${url}`;
-  
-  // Final URL
   const resolved = `${apiBase}${path}`;
 
   // For AR compatibility, ensure the final URL is absolute

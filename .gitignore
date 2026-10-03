@@ -27,3 +27,7 @@ dist-ssr
 *.sw?
 .vercel
 .playwright-mcp
+*.usdz
+*.docx
+*.pdf
+*.zip
