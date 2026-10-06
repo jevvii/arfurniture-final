@@ -26,9 +26,13 @@ export const AdminLogin: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-slate-100 p-8">
-        <h1 className="text-2xl font-bold text-slate-900 text-center mb-6">Admin Login</h1>
+    <div className="min-h-screen flex items-center justify-center philippine-wood-bg p-6">
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-[#d6be9f]/60 p-8">
+        <div className="flex flex-col items-center mb-6">
+          <img src="/logo/logo.png" alt="Beauteous Palochina" className="w-16 h-16 object-contain mb-2" />
+          <h2 className="text-2xl font-bold font-serif text-[#341e10]">Beauteous Palochina</h2>
+          <p className="text-xs text-[#8c572a] uppercase tracking-wider font-semibold mt-0.5">Admin Management Portal</p>
+        </div>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg text-center">
@@ -46,7 +50,7 @@ export const AdminLogin: React.FC = () => {
                 required
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#8c572a] focus:ring-2 focus:ring-[#8c572a]/20 outline-none transition-all"
                 placeholder="admin or admin@domain.com"
               />
             </div>
@@ -61,7 +65,7 @@ export const AdminLogin: React.FC = () => {
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#8c572a] focus:ring-2 focus:ring-[#8c572a]/20 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
@@ -70,7 +74,7 @@ export const AdminLogin: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+            className="w-full bg-[#8c572a] text-white py-3 rounded-xl font-semibold hover:bg-[#a66a35] transition-colors flex items-center justify-center gap-2 disabled:opacity-70 shadow-md active:scale-95"
           >
             {loading ? 'Signing in…' : (<><span>Sign In</span><ArrowRight className="w-4 h-4" /></>)}
           </button>
@@ -81,7 +85,7 @@ export const AdminLogin: React.FC = () => {
         <div className="mt-4 text-center">
             <button 
               onClick={() => navigate('/')}
-              className="text-sm text-slate-600 hover:text-indigo-600 hover:underline flex items-center justify-center gap-1 mx-auto"
+              className="text-sm text-[#8c572a] hover:text-[#5a3821] hover:underline flex items-center justify-center gap-1 mx-auto font-medium"
             >
               <ArrowRight className="w-4 h-4 rotate-180" /> Back to Store
             </button>

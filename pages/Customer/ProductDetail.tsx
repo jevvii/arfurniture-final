@@ -239,18 +239,18 @@ export const ProductDetail: React.FC = () => {
         </div>
 
         {/* Right Column: Details */}
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full bg-[#2d1b10]/90 backdrop-blur-md border border-[#6b4224]/50 rounded-2xl p-6 sm:p-8 shadow-2xl text-[#faede1]">
           <div className="mb-auto">
-            <span className="text-indigo-600 font-medium text-sm tracking-wider uppercase">{product.category}</span>
-            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mt-2 mb-2">{product.name}</h1>
+            <span className="text-[#e2ab72] font-semibold text-xs tracking-wider uppercase">{product.category}</span>
+            <h1 className="text-3xl md:text-4xl font-bold text-[#faede1] font-serif mt-2 mb-2">{product.name}</h1>
             <div className="flex items-center justify-between mb-8">
-              <div className="text-4xl font-bold text-slate-900">{CURRENCY}{product.price.toLocaleString()}</div>
+              <div className="text-4xl font-bold text-[#faede1] font-serif">{CURRENCY}{product.price.toLocaleString()}</div>
               <div className={`text-sm font-bold px-3 py-1 rounded-full ${
                 !isAvailable 
-                  ? 'bg-red-50 text-red-600' 
+                  ? 'bg-red-950/80 text-red-300 border border-red-800' 
                   : isLowStock 
-                    ? 'bg-orange-50 text-orange-600 animate-pulse' 
-                    : 'bg-slate-100 text-slate-600'
+                    ? 'bg-amber-950/80 text-amber-300 border border-amber-700 animate-pulse' 
+                    : 'bg-[#faede1]/10 text-[#e2ab72] border border-[#6b4224]/40'
               }`}>
                 {!isAvailable 
                   ? 'Out of Stock' 
@@ -262,19 +262,19 @@ export const ProductDetail: React.FC = () => {
 
             {/* Variant Selector */}
             <div className="mb-8">
-              <h3 className="text-sm font-bold text-slate-900 mb-3">Available Wood Finishes</h3>
+              <h3 className="text-sm font-bold text-[#faede1] mb-3">Available Wood Finishes</h3>
               <div className="flex gap-3">
                 <button
                   onClick={() => {
                     setSelectedVariant(undefined);
                     setActiveImage(resolveAssetUrl(product.imageUrl));
                   }}
-                  className={`group relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${!selectedVariant ? 'border-indigo-600 ring-2 ring-indigo-600/20 scale-110' : 'border-slate-200 hover:border-slate-400'}`}
+                  className={`group relative w-12 h-12 rounded-full border-2 transition-all flex items-center justify-center ${!selectedVariant ? 'border-[#e2ab72] ring-2 ring-[#e2ab72]/40 scale-110' : 'border-[#6b4224]/50 hover:border-[#e2ab72]'}`}
                   title={product.colorName || 'Base Finish'}
                 >
-                  <span className="absolute inset-1 rounded-full border border-black/5" style={{ backgroundColor: product.color || '#F8F8F8' }}></span>
+                  <span className="absolute inset-1 rounded-full border border-black/10" style={{ backgroundColor: product.color || '#F8F8F8' }}></span>
                   {!selectedVariant && (
-                    <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-900 bg-white px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-10 uppercase tracking-tighter">
+                    <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#2d1b10] bg-[#faede1] px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-10 uppercase tracking-tighter">
                       Original
                     </span>
                   )}
@@ -286,13 +286,12 @@ export const ProductDetail: React.FC = () => {
                       setSelectedVariant(variant);
                       setActiveImage(resolveAssetUrl(product.imageUrl));
                     }}
-                    className={`group relative w-12 h-12 rounded-full border-2 transition-all ${selectedVariant?.id === variant.id ? 'border-indigo-600 ring-2 ring-indigo-600/20 scale-110' : 'border-slate-200 hover:border-slate-400'
-                      }`}
+                    className={`group relative w-12 h-12 rounded-full border-2 transition-all ${selectedVariant?.id === variant.id ? 'border-[#e2ab72] ring-2 ring-[#e2ab72]/40 scale-110' : 'border-[#6b4224]/50 hover:border-[#e2ab72]'}`}
                     title={variant.name}
                   >
-                    <span className="absolute inset-1 rounded-full border border-black/5" style={{ backgroundColor: variant.color }}></span>
+                    <span className="absolute inset-1 rounded-full border border-black/10" style={{ backgroundColor: variant.color }}></span>
                     {selectedVariant?.id === variant.id && (
-                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-900 bg-white px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-10 uppercase tracking-tighter">
+                      <span className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-[10px] font-bold text-[#2d1b10] bg-[#faede1] px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-10 uppercase tracking-tighter">
                         {variant.name.split(' ')[0]}
                       </span>
                     )}
@@ -302,38 +301,38 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             {/* Description Area */}
-            <div className="prose prose-slate mb-8">
-              <p className="text-lg text-slate-600 leading-relaxed">
+            <div className="mb-8">
+              <p className="text-base text-[#d8c3b0] leading-relaxed">
                 {product.description}
               </p>
             </div>
 
             {/* Specs */}
-            <div className="bg-slate-50 rounded-xl p-6 mb-8 border border-slate-100 shadow-sm">
-              <h3 className="font-semibold text-slate-900 mb-4">Dimensions</h3>
+            <div className="bg-[#1f1107]/80 rounded-xl p-6 mb-8 border border-[#6b4224]/40 shadow-sm">
+              <h3 className="font-semibold text-[#faede1] mb-4">Dimensions</h3>
               <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">Width</div>
-                  <div className="font-mono text-slate-700">{product.dimensions.width} {product.dimensions.unit}</div>
+                <div className="p-4 bg-[#2b180d] rounded-lg border border-[#6b4224]/40 shadow-sm">
+                  <div className="text-[10px] font-bold text-[#c29467] uppercase mb-1 tracking-wider">Width</div>
+                  <div className="font-mono text-[#faede1]">{product.dimensions.width} {product.dimensions.unit}</div>
                 </div>
-                <div className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">Height</div>
-                  <div className="font-mono text-slate-700">{product.dimensions.height} {product.dimensions.unit}</div>
+                <div className="p-4 bg-[#2b180d] rounded-lg border border-[#6b4224]/40 shadow-sm">
+                  <div className="text-[10px] font-bold text-[#c29467] uppercase mb-1 tracking-wider">Height</div>
+                  <div className="font-mono text-[#faede1]">{product.dimensions.height} {product.dimensions.unit}</div>
                 </div>
-                <div className="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <div className="text-[10px] font-bold text-slate-400 uppercase mb-1 tracking-wider">Depth</div>
-                  <div className="font-mono text-slate-700">{product.dimensions.depth} {product.dimensions.unit}</div>
+                <div className="p-4 bg-[#2b180d] rounded-lg border border-[#6b4224]/40 shadow-sm">
+                  <div className="text-[10px] font-bold text-[#c29467] uppercase mb-1 tracking-wider">Depth</div>
+                  <div className="font-mono text-[#faede1]">{product.dimensions.depth} {product.dimensions.unit}</div>
                 </div>
               </div>
             </div>
 
             {/* AI Chat Assistant */}
-            <div className="bg-indigo-50/50 rounded-xl p-5 mb-8 border border-indigo-100">
-              <h3 className="text-sm font-bold text-indigo-900 mb-3 flex items-center gap-2">
-                <Wand2 className="w-4 h-4" /> Ask about this product
+            <div className="bg-[#24140a]/90 rounded-xl p-5 mb-8 border border-[#6b4224]/50">
+              <h3 className="text-sm font-bold text-[#e2ab72] mb-3 flex items-center gap-2">
+                <Wand2 className="w-4 h-4" /> Ask about this piece
               </h3>
               {chatAnswer && (
-                <div className="mb-4 p-3 bg-white rounded-lg text-sm text-slate-700 shadow-sm border border-indigo-50 animate-in fade-in slide-in-from-bottom-2">
+                <div className="mb-4 p-3 bg-[#1f1107] rounded-lg text-sm text-[#faede1] shadow-sm border border-[#6b4224]/40 animate-in fade-in slide-in-from-bottom-2">
                   {chatAnswer}
                 </div>
               )}
@@ -343,12 +342,12 @@ export const ProductDetail: React.FC = () => {
                   value={chatQuestion}
                   onChange={e => setChatQuestion(e.target.value)}
                   placeholder="e.g., Will this fit in a small room?"
-                  className="flex-1 text-sm px-4 py-3 rounded-lg bg-slate-800 text-white placeholder:text-slate-400 border-transparent focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                  className="flex-1 text-sm px-4 py-3 rounded-lg bg-[#1a0f07] text-white placeholder:text-[#99795e] border border-[#6b4224]/40 focus:outline-none focus:ring-2 focus:ring-[#e2ab72] shadow-inner"
                 />
                 <button
                   type="submit"
                   disabled={isChatting || !chatQuestion}
-                  className="bg-indigo-600 text-white p-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 shadow-sm transition-all hover:scale-105"
+                  className="bg-[#8c572a] hover:bg-[#a66a35] text-white p-3 rounded-lg disabled:opacity-50 shadow-md transition-all hover:scale-105"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -356,37 +355,37 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             {/* Policies Section */}
-            <div className="border-t border-slate-200 pt-6 space-y-5 mb-8">
+            <div className="border-t border-[#6b4224]/40 pt-6 space-y-5 mb-8">
               <div className="flex items-start gap-4">
-                <div className="p-2 bg-slate-100 text-slate-600 rounded-lg shrink-0">
+                <div className="p-2 bg-[#1f1107] text-[#e2ab72] rounded-lg shrink-0 border border-[#6b4224]/30">
                   <Truck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-1">Shipping Costs</h4>
-                  <p className="text-sm text-slate-500 leading-snug">
-                    Free standard shipping on all orders over {CURRENCY}5,000. Expedited options available calculated at checkout.
+                  <h4 className="font-bold text-[#faede1] text-sm mb-1">Shipping Costs</h4>
+                  <p className="text-sm text-[#d8c3b0] leading-snug">
+                    Free standard shipping on all orders over {CURRENCY}5,000 across Metro Manila and surrounding provinces.
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
-                <div className="p-2 bg-slate-100 text-slate-600 rounded-lg shrink-0">
+                <div className="p-2 bg-[#1f1107] text-[#e2ab72] rounded-lg shrink-0 border border-[#6b4224]/30">
                   <RefreshCw className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-1">Returns & Cancellations</h4>
-                  <p className="text-sm text-slate-500 leading-snug">
-                    Return within 30 days for a full refund. Cancel anytime before shipping for no charge.
+                  <h4 className="font-bold text-[#faede1] text-sm mb-1">Returns & Cancellations</h4>
+                  <p className="text-sm text-[#d8c3b0] leading-snug">
+                    Return within 30 days for a full refund. Cancel anytime before workshop dispatch.
                   </p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
-                <div className="p-2 bg-slate-100 text-slate-600 rounded-lg shrink-0">
+                <div className="p-2 bg-[#1f1107] text-[#e2ab72] rounded-lg shrink-0 border border-[#6b4224]/30">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 text-sm mb-1">Warranty Details</h4>
-                  <p className="text-sm text-slate-500 leading-snug">
-                    Includes a 3-year comprehensive warranty covering manufacturing defects and structural integrity.
+                  <h4 className="font-bold text-[#faede1] text-sm mb-1">Pinoy Craftsmanship Warranty</h4>
+                  <p className="text-sm text-[#d8c3b0] leading-snug">
+                    Includes a 3-year warranty covering joinery, hardware, and structural Palochina durability.
                   </p>
                 </div>
               </div>
@@ -394,17 +393,17 @@ export const ProductDetail: React.FC = () => {
           </div>
 
           {/* Actions */}
-          <div className="pt-6 border-t border-slate-200 mt-auto">
+          <div className="pt-6 border-t border-[#6b4224]/40 mt-auto">
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
-              <div className={`flex items-center border rounded-xl overflow-hidden h-[56px] w-fit transition-colors ${isLowStock ? 'border-orange-200 bg-orange-50/30' : 'border-slate-200'}`}>
+              <div className={`flex items-center border rounded-xl overflow-hidden h-[56px] w-fit transition-colors ${isLowStock ? 'border-amber-700 bg-amber-950/40' : 'border-[#6b4224]/50 bg-[#1f1107]'}`}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1 || !isAvailable}
-                  className="px-4 py-2 hover:bg-white disabled:opacity-20 transition-all text-slate-600"
+                  className="px-4 py-2 hover:bg-[#3a2010] disabled:opacity-20 transition-all text-[#faede1]"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className={`px-6 font-black text-xl min-w-[60px] text-center ${isLowStock ? 'text-orange-600' : 'text-slate-900'}`}>
+                <span className={`px-6 font-black text-xl min-w-[60px] text-center ${isLowStock ? 'text-amber-300' : 'text-[#faede1]'}`}>
                   {isAvailable ? quantity : 0}
                 </span>
                 <button
@@ -413,7 +412,7 @@ export const ProductDetail: React.FC = () => {
                       setQuantity(quantity + 1);
                     }
                   }}
-                  className="px-4 py-2 hover:bg-white disabled:opacity-20 transition-all text-slate-600"
+                  className="px-4 py-2 hover:bg-[#3a2010] disabled:opacity-20 transition-all text-[#faede1]"
                   disabled={quantity >= availableToAdd || !isAvailable}
                 >
                   <Plus className="w-4 h-4" />
@@ -425,10 +424,10 @@ export const ProductDetail: React.FC = () => {
                 disabled={!isAvailable || isAddingToCart}
                 className={`flex-1 flex items-center justify-center gap-3 px-8 py-4 rounded-xl font-bold text-white transition-all shadow-lg active:scale-95 ${
                   !isAvailable 
-                    ? 'bg-slate-300 cursor-not-allowed shadow-none' 
+                    ? 'bg-slate-700 cursor-not-allowed shadow-none' 
                     : isAddingToCart
-                      ? 'bg-indigo-400 cursor-wait'
-                      : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'
+                      ? 'bg-[#a66a35] cursor-wait'
+                      : 'bg-[#8c572a] hover:bg-[#a66a35] shadow-black/20'
                 }`}
               >
                 {isAddingToCart ? (
@@ -441,12 +440,12 @@ export const ProductDetail: React.FC = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              {/* AR Trigger - Mobile goes to /ar/:id, Desktop shows QR modal */}
+              {/* AR Trigger */}
               <button
                 onClick={() => isMobile ? navigate(`/ar/${product._id}`) : setIsQRModalOpen(true)}
-                className="flex-1 sm:flex-none sm:w-auto bg-indigo-50 border-2 border-indigo-600 text-indigo-600 px-6 py-4 rounded-xl font-bold text-lg hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95"
+                className="flex-1 sm:flex-none sm:w-auto bg-[#faede1]/10 border-2 border-[#e2ab72] text-[#faede1] px-6 py-4 rounded-xl font-bold text-lg hover:bg-[#e2ab72]/20 transition-all flex items-center justify-center gap-2 active:scale-95"
               >
-                <Smartphone className="w-5 h-5" />
+                <Smartphone className="w-5 h-5 text-[#e2ab72]" />
                 <span>View in your room</span>
               </button>
             </div>

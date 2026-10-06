@@ -200,15 +200,15 @@ export const Shop: React.FC = () => {
 
       {/* 2. New Arrivals Highlight (Homepage Only) */}
       {!loading && isHomeView && newArrivals.length > 0 && (
-        <section className="py-8 bg-emerald-50/50 rounded-3xl px-6 mb-12 -mx-2 md:mx-0">
+        <section className="py-8 bg-[#2d1b10]/80 backdrop-blur-sm border border-[#6b4224]/50 rounded-3xl px-6 mb-12 -mx-2 md:mx-0 shadow-xl">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <span className="text-emerald-600 font-bold tracking-wider text-xs uppercase mb-2 block">Fresh Finds</span>
-              <h2 className="text-3xl font-bold text-slate-900 font-serif flex items-center gap-2">
+              <span className="text-[#e2ab72] font-bold tracking-wider text-xs uppercase mb-2 block font-sans">Fresh Finds</span>
+              <h2 className="text-3xl font-bold text-[#faede1] font-serif flex items-center gap-2">
                 New Arrivals
               </h2>
             </div>
-            <Link to="/?filter=new" className="hidden md:flex items-center gap-2 text-sm font-bold text-slate-900 hover:text-emerald-600 transition-colors">
+            <Link to="/?filter=new" className="hidden md:flex items-center gap-2 text-sm font-bold text-[#e2ab72] hover:text-white transition-colors">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -224,13 +224,13 @@ export const Shop: React.FC = () => {
 
       {/* 3. Featured Collection (Homepage Only) */}
       {!loading && isHomeView && featuredProducts.length > 0 && (
-        <section className="py-8 bg-indigo-50/50 rounded-3xl px-6 mb-12 -mx-2 md:mx-0">
+        <section className="py-8 bg-[#2d1b10]/80 backdrop-blur-sm border border-[#6b4224]/50 rounded-3xl px-6 mb-12 -mx-2 md:mx-0 shadow-xl">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <span className="text-indigo-600 font-bold tracking-wider text-xs uppercase mb-2 block">Hand Picked</span>
-              <h2 className="text-3xl font-bold text-slate-900 font-serif">Featured Collection</h2>
+              <span className="text-[#e2ab72] font-bold tracking-wider text-xs uppercase mb-2 block font-sans">Hand Picked</span>
+              <h2 className="text-3xl font-bold text-[#faede1] font-serif">Featured Collection</h2>
             </div>
-            <Link to="/?filter=featured" className="hidden md:flex items-center gap-2 text-sm font-bold text-slate-900 hover:text-indigo-600 transition-colors">
+            <Link to="/?filter=featured" className="hidden md:flex items-center gap-2 text-sm font-bold text-[#e2ab72] hover:text-white transition-colors">
               View All <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -245,16 +245,16 @@ export const Shop: React.FC = () => {
       )}
 
       {/* 4. Main Product Grid Header */}
-      <div className="mb-8 mt-4 pt-8 border-t border-slate-200">
-        <h2 className="text-2xl font-bold text-slate-900 font-serif">
-          {searchTerm && <>Results for <span className="text-indigo-600">"{searchTerm}"</span></>}
+      <div className="mb-8 mt-4 pt-8 border-t border-[#6b4224]/40">
+        <h2 className="text-2xl font-bold text-[#faede1] font-serif">
+          {searchTerm && <>Results for <span className="text-[#e2ab72]">"{searchTerm}"</span></>}
           {categoryFilter !== 'All' && `${categoryFilter}`}
           {specialFilter === 'new' && 'New Arrivals'}
           {specialFilter === 'featured' && 'Featured Collection'}
           {specialFilter === 'sale' && 'On Sale'}
           {isHomeView && 'All Products'}
         </h2>
-        <p className="text-slate-500 text-sm mt-1">
+        <p className="text-[#d8c3b0] text-sm mt-1">
           {filteredProducts.length} products found
         </p>
       </div>
@@ -279,11 +279,11 @@ export const Shop: React.FC = () => {
       )}
 
       {!loading && filteredProducts.length === 0 && (
-        <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-          <Search className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900">No products found</h3>
-          <p className="text-slate-500">Try adjusting your search or filter.</p>
-          <Link to="/" className="mt-4 inline-block text-indigo-600 font-medium hover:underline">Clear Filters</Link>
+        <div className="text-center py-20 bg-[#2d1b10]/80 backdrop-blur-sm rounded-2xl border border-dashed border-[#6b4224]/60 shadow-lg">
+          <Search className="w-12 h-12 text-[#99795e] mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-[#faede1] font-serif">No products found</h3>
+          <p className="text-[#d8c3b0]">Try adjusting your search or filter.</p>
+          <Link to="/" className="mt-4 inline-block text-[#e2ab72] font-medium hover:underline">Clear Filters</Link>
         </div>
       )}
     </div>

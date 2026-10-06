@@ -20,7 +20,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout, setAuthModalOpen, isAuthModalOpen } = useAuth();
 
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
-  const [storeSettings, setStoreSettings] = useState({ name: APP_NAME, logoUrl: '' });
+  const [storeSettings, setStoreSettings] = useState({ name: APP_NAME, logoUrl: '/logo/logo.png' });
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -91,7 +91,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           const data = await res.json();
           setStoreSettings({
             name: data.storeName || APP_NAME,
-            logoUrl: data.logoUrl || ''
+            logoUrl: data.logoUrl || '/logo/logo.png'
           });
         }
       } catch (error) {
@@ -127,32 +127,34 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen philippine-wood-bg flex flex-col font-sans">
       {/* Header Wrapper */}
-      <header className="sticky top-0 z-40 bg-white border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-40 bg-[#fdfbf7]/95 backdrop-blur-md border-b border-[#e2cfb9] shadow-sm">
 
         {/* TOP ROW: Logo, Search, User Actions */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20 gap-8">
 
-            {/* 1. Logo (Retained Original Style) */}
+            {/* 1. Logo */}
             <div className="flex-shrink-0">
-              <Link to={isAdmin ? "/admin" : "/"} className="flex items-center gap-2 group">
-                <div className="flex items-center gap-2">
-                  {storeSettings.logoUrl ? (
-                    <img
-                      src={resolveAssetUrl(storeSettings.logoUrl)}
-                      alt={storeSettings.name}
-                      className="w-10 h-10 object-contain rounded-lg bg-white"
-                    />
-                  ) : (
-                    <div className="p-2 bg-indigo-600 rounded-lg group-hover:bg-indigo-700 transition-colors">
-                      <Hexagon className="w-6 h-6 text-white fill-current" />
-                    </div>
-                  )}
-                  <span className="text-xl font-bold text-slate-900 tracking-tight">
+              <Link to={isAdmin ? "/admin" : "/"} className="flex items-center gap-3 group">
+                <img
+                  src={resolveAssetUrl(storeSettings.logoUrl || '/logo/logo.png')}
+                  alt={storeSettings.name}
+                  className="w-12 h-12 object-contain transition-transform group-hover:scale-105"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/logo/logo.png';
+                  }}
+                />
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold tracking-tight text-[#3b2314] font-serif leading-none">
                     {isAdmin ? 'Admin' : storeSettings.name}
                   </span>
+                  {!isAdmin && (
+                    <span className="text-[10px] tracking-widest uppercase font-semibold text-[#8c572a] mt-1">
+                      Philippine Woodwork
+                    </span>
+                  )}
                 </div>
               </Link>
             </div>
@@ -165,12 +167,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     type="text"
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
-                    placeholder="Search products, brands, and styles"
-                    className="w-full h-11 pl-6 pr-12 rounded-full border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 focus:bg-white transition-all"
+                    placeholder="Search furniture, styles, and wood types"
+                    className="w-full h-11 pl-6 pr-12 rounded-full border border-[#d6be9f] bg-white text-[#2c180d] placeholder:text-[#99795e] focus:outline-none focus:ring-2 focus:ring-[#c28249]/30 focus:border-[#8b572a] transition-all shadow-inner"
                   />
                   <button
                     type="submit"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-indigo-600 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-[#8c572a] hover:text-[#5a3821] transition-colors"
                   >
                     <Search className="w-5 h-5" />
                   </button>
@@ -327,7 +329,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         {/* BOTTOM ROW: Secondary Navigation (Customer Only) */}
         {!isAdmin && (
-          <div className="hidden md:block border-t border-slate-100">
+          <div className="hidden md:block border-t border-[#ebdcc8] bg-[#fdfbf7]/80 backdrop-blur-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <nav className="flex justify-center items-center space-x-8 h-12">
                 {SHOP_CATEGORIES.map((cat) => {
@@ -354,21 +356,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       onClick={cat.action}
                       className={`text-sm font-medium tracking-wide transition-all ${
                         isActive 
-                          ? 'text-indigo-600 underline decoration-2 underline-offset-4' 
-                          : 'text-slate-600 hover:text-indigo-600 hover:underline decoration-2 underline-offset-4'
+                          ? 'text-[#8b4d1b] font-bold underline decoration-2 underline-offset-4' 
+                          : 'text-[#63432b] hover:text-[#8b4d1b] hover:underline decoration-2 underline-offset-4'
                       }`}
                     >
                       {cat.label}
                     </button>
                   );
                 })}
-                <span className="h-4 w-px bg-slate-300 mx-2"></span>
+                <span className="h-4 w-px bg-[#d6be9f] mx-2"></span>
                 <Link 
                   to="/" 
                   className={`text-sm font-medium tracking-wide transition-all ${
                     location.pathname === '/' && !searchParams.has('category') && !searchParams.has('filter') && !searchParams.has('q')
-                      ? 'text-indigo-600 underline decoration-2 underline-offset-4'
-                      : 'text-indigo-600 hover:underline decoration-2 underline-offset-4'
+                      ? 'text-[#8b4d1b] font-bold underline decoration-2 underline-offset-4'
+                      : 'text-[#8b4d1b] hover:underline decoration-2 underline-offset-4'
                   }`}
                 >
                   All Products
@@ -457,45 +459,48 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Footer */}
       {!isAdmin && (
-        <footer className="bg-slate-900 text-slate-400 py-12 mt-auto border-t border-slate-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <footer className="bg-[#1f1107] text-[#c9b5a2] py-12 mt-auto border-t border-[#462713] relative overflow-hidden">
+          <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('/philippine-solihiya-pattern.svg')]"></div>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
               <div className="col-span-1 md:col-span-2">
-                <div className="flex items-center gap-2 mb-4 text-white">
-                  {storeSettings.logoUrl ? (
-                    <img
-                      src={resolveAssetUrl(storeSettings.logoUrl)}
-                      alt={storeSettings.name}
-                      className="w-8 h-8 object-contain rounded bg-white p-0.5"
-                    />
-                  ) : (
-                    <div className="p-1.5 bg-indigo-600 rounded-md">
-                      <Hexagon className="w-5 h-5 text-white fill-current" />
-                    </div>
-                  )}
-                  <span className="text-2xl font-bold">{storeSettings.name}</span>
+                <div className="flex items-center gap-3 mb-4 text-white">
+                  <img
+                    src={resolveAssetUrl(storeSettings.logoUrl || '/logo/logo.png')}
+                    alt={storeSettings.name}
+                    className="w-10 h-10 object-contain rounded-lg p-0.5 bg-white/10"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = '/logo/logo.png';
+                    }}
+                  />
+                  <div>
+                    <span className="text-2xl font-bold font-serif text-[#faede1] block leading-tight">{storeSettings.name}</span>
+                    <span className="text-[11px] text-[#c29467] uppercase tracking-wider font-sans font-semibold">Tatak Valenzuela • Handcrafted Woodwork</span>
+                  </div>
                 </div>
-                <p className="text-slate-500 max-w-sm">
-                  The premier destination for AR-enabled furniture shopping. Visualize perfection in your home before you buy.
+                <p className="text-[#a8907a] max-w-sm text-sm leading-relaxed">
+                  Artisan Palochina and sustainable wooden furniture, proudly crafted in Valenzuela City, Philippines. Visualize authentic Pinoy craftsmanship in your living space with Augmented Reality.
                 </p>
               </div>
               <div>
-                <h4 className="text-white font-semibold mb-4">Shop</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link to="/" className="hover:text-white transition-colors">New Arrivals</Link></li>
-                  <li><Link to="/?filter=sale" className="hover:text-white transition-colors">Sale</Link></li>
-                  <li><Link to="/cart" className="hover:text-white transition-colors">My Cart</Link></li>
+                <h4 className="text-[#faede1] font-serif font-semibold mb-4 text-base">Collections</h4>
+                <ul className="space-y-2 text-sm text-[#b8a28e]">
+                  <li><Link to="/?filter=new" className="hover:text-[#faede1] transition-colors">New Arrivals</Link></li>
+                  <li><Link to="/?filter=featured" className="hover:text-[#faede1] transition-colors">Featured Pieces</Link></li>
+                  <li><Link to="/?filter=sale" className="hover:text-[#faede1] transition-colors">On Sale</Link></li>
+                  <li><Link to="/cart" className="hover:text-[#faede1] transition-colors">My Cart</Link></li>
                 </ul>
               </div>
               <div>
-                <h4 className="text-white font-semibold mb-4">Admin</h4>
-                <ul className="space-y-2 text-sm">
-                  <li><Link to="/admin/login" className="hover:text-white transition-colors">Admin Login</Link></li>
+                <h4 className="text-[#faede1] font-serif font-semibold mb-4 text-base">About & Admin</h4>
+                <ul className="space-y-2 text-sm text-[#b8a28e]">
+                  <li><Link to="/about" className="hover:text-[#faede1] transition-colors">About Our Workshop</Link></li>
+                  <li><Link to="/admin/login" className="hover:text-[#faede1] transition-colors">Admin Portal</Link></li>
                 </ul>
               </div>
             </div>
-            <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
-              <p>© 2026 {storeSettings.name}. All rights reserved.</p>
+            <div className="border-t border-[#3a2010] pt-8 text-center text-xs text-[#8c7461]">
+              <p>© 2026 {storeSettings.name}. All rights reserved. Handcrafted with heart in the Philippines.</p>
             </div>
           </div>
         </footer>

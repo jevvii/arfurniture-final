@@ -14,8 +14,8 @@ router.get('/', asyncHandler(async (req, res) => {
   if (!storeSettings) {
     // Return default settings if none found
     return res.json({
-      storeName: 'ARFurniture',
-      logoUrl: null
+      storeName: 'Beauteous Palochina',
+      logoUrl: '/logo/logo.png'
     })
   }
   

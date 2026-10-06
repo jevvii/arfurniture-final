@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <pattern id="banig" width="64" height="64" patternUnits="userSpaceOnUse">
+      <!-- Diagonal wood parquet weave lines matching Beauteous Palochina logo -->
+      <path d="M-16,16 l32,-32 M0,32 l32,-32 M16,48 l32,-32 M32,64 l32,-32" stroke="#dfb37c" stroke-width="2.2" stroke-opacity="0.10" stroke-linecap="square" />
+      <path d="M-8,24 l32,-32 M8,40 l32,-32 M24,56 l32,-32 M40,72 l32,-32" stroke="#c4945d" stroke-width="2.2" stroke-opacity="0.08" stroke-linecap="square" />
+      
+      <path d="M16,-16 l32,32 M32,0 l32,32 M48,16 l32,32 M64,32 l32,32" stroke="#dfb37c" stroke-width="2.2" stroke-opacity="0.10" stroke-linecap="square" />
+      <path d="M24,-8 l32,32 M40,8 l32,32 M56,24 l32,32 M72,40 l32,32" stroke="#c4945d" stroke-width="2.2" stroke-opacity="0.08" stroke-linecap="square" />
+    </pattern>
+  </defs>
+  <rect width="64" height="64" fill="url(#banig)" />
+</svg>

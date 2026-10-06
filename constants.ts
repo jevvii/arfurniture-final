@@ -1,15 +1,21 @@
 
 import { Box, ShoppingBag, LayoutDashboard, LogOut, User, ClipboardList, Megaphone, Settings } from 'lucide-react';
 
-export const APP_NAME = "ARFurniture";
+export const APP_NAME = "Beauteous Palochina";
 export const CURRENCY = "₱";
 
 // Get API base URL from environment or construct it
 export const getApiBaseUrl = (): string => {
-  // In production (Vercel), use the env variable if provided
-  const envBase = (import.meta as any).env?.VITE_AUTH_API_BASE;
   const isLocalhost = typeof window !== 'undefined' && 
     (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  // If running locally on localhost, always target the local dev port 4000
+  if (isLocalhost) {
+    return 'http://localhost:4000';
+  }
+
+  // In production (Vercel), use the env variable if provided
+  const envBase = (import.meta as any).env?.VITE_AUTH_API_BASE;
   
   // Detect LAN IP (e.g., 192.168.x.x, 10.x.x.x)
   const isLanIp = typeof window !== 'undefined' && 
@@ -28,8 +34,8 @@ export const getApiBaseUrl = (): string => {
     return sanitizedBase;
   }
   
-  // In local development or LAN testing, default to port 4000 on the current host
-  if (typeof window !== 'undefined' && (isLocalhost || isLanIp)) {
+  // In LAN testing, default to port 4000 on the current host
+  if (typeof window !== 'undefined' && isLanIp) {
     return `${window.location.protocol}//${window.location.hostname}:4000`;
   }
   

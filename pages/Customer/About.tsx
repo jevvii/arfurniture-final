@@ -4,13 +4,14 @@ import { Link } from 'react-router-dom';
 
 export const About: React.FC = () => {
   return (
-    <div className="bg-white min-h-screen">
-      <div className="relative bg-slate-900 py-24 px-4 sm:px-6 lg:px-8 text-center">
+    <div className="bg-[#fdfbf7] min-h-screen">
+      <div className="relative bg-[#201207] py-24 px-4 sm:px-6 lg:px-8 text-center border-b border-[#4d2c16] overflow-hidden">
+        <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('/philippine-solihiya-pattern.svg')]"></div>
         <div className="relative z-10 max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-white mb-6">
+          <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#faede1] mb-6">
             Proudly Made in Valenzuela
           </h1>
-          <p className="text-xl text-slate-300 mb-8 font-light">
+          <p className="text-xl text-[#d4bca7] mb-8 font-light">
             Bringing sustainable Palochina wood furniture from our workshop to your home with AR technology.
           </p>
         </div>
@@ -19,30 +20,30 @@ export const About: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center mb-16">
            <div>
-              <h2 className="text-3xl font-bold text-slate-900 mb-6 font-serif">Who We Are</h2>
-              <p className="text-lg text-slate-600 mb-6 leading-relaxed">
-                ARFurniture is a homegrown e-commerce platform rooted in Valenzuela City, the industrial gateway of Metro Manila. 
+              <h2 className="text-3xl font-bold text-[#341e10] mb-6 font-serif">Who We Are</h2>
+              <p className="text-lg text-[#5a3821] mb-6 leading-relaxed">
+                Beauteous Palochina is a homegrown e-commerce platform rooted in Valenzuela City, the industrial gateway of Metro Manila. 
                 We specialize in crafting high-quality furniture from <strong>Palochina wood</strong>—upcycled, sustainable, and durable pine wood that brings a rustic charm to any space.
               </p>
-              <p className="text-lg text-slate-600 mb-6 leading-relaxed">
+              <p className="text-lg text-[#5a3821] mb-6 leading-relaxed">
                 We combine traditional Filipino craftsmanship with modern Augmented Reality (AR) technology, allowing you to visualize our locally made pieces in your home before you buy.
               </p>
               <div className="space-y-6">
                   <div className="flex items-start gap-4">
-                      <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">
+                      <div className="p-3 bg-[#f5e6d3] rounded-lg text-[#8c572a] shrink-0">
                           <MapPin className="w-5 h-5" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-slate-900 text-lg">Workshop Location</h3>
-                          <p className="text-slate-600">123 Gen. T. de Leon Street<br/>Valenzuela City, Metro Manila 1442</p>
+                          <h3 className="font-bold text-[#341e10] text-lg">Workshop Location</h3>
+                          <p className="text-[#6d4529]">123 Gen. T. de Leon Street<br/>Valenzuela City, Metro Manila 1442</p>
                       </div>
                   </div>
                   <div className="flex items-start gap-4">
-                      <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">
+                      <div className="p-3 bg-[#f5e6d3] rounded-lg text-[#8c572a] shrink-0">
                           <Briefcase className="w-5 h-5" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-slate-900 text-lg">Our Specialty</h3>
+                          <h3 className="font-bold text-[#341e10] text-lg">Our Specialty</h3>
                           <p className="text-slate-600">
                             Custom Palochina and industrial-style furniture:
                             <ul className="list-disc list-inside mt-1 text-sm">
@@ -54,12 +55,12 @@ export const About: React.FC = () => {
                       </div>
                   </div>
                    <div className="flex items-start gap-4">
-                      <div className="p-3 bg-indigo-100 rounded-lg text-indigo-600 shrink-0">
+                      <div className="p-3 bg-[#f5e6d3] rounded-lg text-[#8c572a] shrink-0">
                           <Clock className="w-5 h-5" />
                       </div>
                       <div>
-                          <h3 className="font-bold text-slate-900 text-lg">Established 2020</h3>
-                          <p className="text-slate-600">
+                          <h3 className="font-bold text-[#341e10] text-lg">Established 2020</h3>
+                          <p className="text-[#6d4529]">
                              Starting as a small backyard workshop during the pandemic, we have grown to serve thousands of Filipino homes with sturdy, stylish, and sustainable furniture.
                           </p>
                       </div>
@@ -78,13 +79,13 @@ export const About: React.FC = () => {
               </div>
            </div>
         </div>
-        <div className="py-8 border-t border-slate-100">
+        <div className="py-8 border-t border-[#ebdcc8]">
             <div className="flex justify-between items-end mb-8 mt-8">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-900 font-serif">Our Palochina Collection</h2>
-                    <p className="text-slate-500 mt-2">Real Pinoy homes transformed with ARFurniture pieces.</p>
+                    <h2 className="text-3xl font-bold text-[#341e10] font-serif">Our Palochina Collection</h2>
+                    <p className="text-[#6d4529] mt-2">Real Pinoy homes transformed with Beauteous Palochina pieces.</p>
                 </div>
-                <Link to="/" className="text-indigo-600 font-bold hover:underline flex items-center gap-2">
+                <Link to="/" className="text-[#8c572a] font-bold hover:underline flex items-center gap-2">
                     Explore Shop <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>

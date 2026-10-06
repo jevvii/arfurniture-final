@@ -1,6 +1,6 @@
 {
-  "name": "ARFurniture",
-  "description": "A modern furniture e-commerce platform featuring Augmented Reality previews, AI-powered descriptions, and a comprehensive admin dashboard.",
+  "name": "Beauteous Palochina",
+  "description": "A handcrafted Filipino Palochina wood furniture e-commerce platform featuring Augmented Reality previews, AI-powered descriptions, and a comprehensive admin dashboard.",
   "requestFramePermissions": [
     "camera",
     "microphone"
