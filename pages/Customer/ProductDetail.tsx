@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { ModelViewerWrapper } from '../../components/ModelViewerWrapper';
 import { ColorTintedImage } from '../../components/ColorTintedImage';
 import { QRCodeModal } from '../../components/QRCodeModal';
-import { CURRENCY, resolveAssetUrl } from '../../constants';
+import { CURRENCY, resolveAssetUrl, getApiBaseUrl } from '../../constants';
 
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -117,10 +117,28 @@ export const ProductDetail: React.FC = () => {
     e.preventDefault();
     if (!product || !chatQuestion.trim()) return;
 
+    const trimmedQuestion = chatQuestion.trim();
     setIsChatting(true);
-    const answer = await askProductAssistant(chatQuestion, product);
+    const answer = await askProductAssistant(trimmedQuestion, product);
     setChatAnswer(answer);
     setIsChatting(false);
+
+    // Notify admin when a user interacts with the AI product assistant
+    fetch(`${getApiBaseUrl()}/api/notifications/chat-inquiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productId: product._id,
+        productName: product.name,
+        customerId: user?._id || null,
+        customerName: user?.name || 'Guest Customer',
+        customerEmail: user?.email || null,
+        question: trimmedQuestion,
+        answer,
+      }),
+    }).catch((err) => {
+      console.warn('Failed to notify admin of AI chat inquiry:', err);
+    });
   }
 
   const handleAddToCart = async () => {

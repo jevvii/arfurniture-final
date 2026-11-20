@@ -39,9 +39,10 @@ export const askProductAssistant = async (question: string, product: Product): P
         const model = 'gemini-2.5-flash';
         const context = `
             Product: ${product.name}
-            Price: $${product.price}
+            Price: ₱${product.price}
             Dimensions: ${product.dimensions.width}x${product.dimensions.height}x${product.dimensions.depth} ${product.dimensions.unit}
             Category: ${product.category}
+            Description: ${product.description}
         `;
         
         const prompt = `

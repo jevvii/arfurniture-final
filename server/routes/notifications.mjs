@@ -30,6 +30,51 @@ router.get('/stream/:userId', (req, res) => {
     })
 })
 
+// Create an admin notification when a user chats with the AI product assistant
+router.post('/chat-inquiry', asyncHandler(async (req, res) => {
+    const {
+        productId,
+        productName,
+        customerId,
+        customerName,
+        customerEmail,
+        question,
+        answer
+    } = req.body || {}
+
+    const trimmedQuestion = typeof question === 'string' ? question.trim() : ''
+    if (!trimmedQuestion) {
+        return res.status(400).json({ error: 'Question is required' })
+    }
+
+    const notifications = req.app.locals.collections.notifications
+    const displayCustomer = (typeof customerName === 'string' && customerName.trim()) ? customerName.trim() : 'Guest Customer'
+    const displayProduct = (typeof productName === 'string' && productName.trim()) ? productName.trim() : 'a product'
+    const questionPreview = trimmedQuestion.length > 100 ? `${trimmedQuestion.slice(0, 100)}...` : trimmedQuestion
+
+    const notification = {
+        userId: 'admin',
+        type: 'ai_chat',
+        productId: productId || null,
+        productName: displayProduct,
+        customerId: customerId || null,
+        customerName: displayCustomer,
+        customerEmail: customerEmail || null,
+        question: trimmedQuestion,
+        answer: typeof answer === 'string' ? answer.slice(0, 500) : '',
+        message: `${displayCustomer} asked AI about ${displayProduct}: "${questionPreview}"`,
+        isRead: false,
+        createdAt: new Date()
+    }
+
+    const insertResult = await notifications.insertOne(notification)
+    const fullNotification = { ...notification, _id: insertResult.insertedId.toString() }
+
+    notificationEmitter.emit('new_notification', fullNotification)
+
+    res.status(201).json(fullNotification)
+}))
+
 // Get notifications for a user
 router.get('/:userId', asyncHandler(async (req, res) => {
     const notifications = req.app.locals.collections.notifications

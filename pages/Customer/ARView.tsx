@@ -49,6 +49,7 @@ export const ARView: React.FC = () => {
   const [diagnostics, setDiagnostics] = useState<Record<string, string>>({});
   const [launchingAR, setLaunchingAR] = useState(false);
   const [currentScale, setCurrentScale] = useState(1.0);
+  const [modelDimensionsCm, setModelDimensionsCm] = useState<{ width: number; height: number; depth: number } | null>(null);
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
   const [arEngine, setArEngine] = useState<'scene-viewer' | 'webxr'>('scene-viewer');
   const [snapToast, setSnapToast] = useState(false);
@@ -240,10 +241,26 @@ export const ARView: React.FC = () => {
       setDownloadProgress(Math.min(99, Math.round(p * 100)));
     };
 
+    const syncModelDimensions = () => {
+      if (typeof viewer.getDimensions !== 'function') return;
+      const dims = viewer.getDimensions();
+      if (dims && (dims.x > 0 || dims.y > 0 || dims.z > 0)) {
+        const scaleAttr = viewer.getAttribute('scale');
+        const parsedScale = scaleAttr ? parseFloat(scaleAttr.split(' ')[0]) : 1;
+        const safeScale = Number.isFinite(parsedScale) && parsedScale > 0 ? parsedScale : 1;
+        setModelDimensionsCm({
+          width: (dims.x * 100) / safeScale,
+          height: (dims.y * 100) / safeScale,
+          depth: (dims.z * 100) / safeScale,
+        });
+      }
+    };
+
     const handleLoad = () => {
       setModelLoaded(true);
       setModelError(null);
       setDownloadProgress(100);
+      syncModelDimensions();
       applyColor();
       updateDiagnostics();
     };
@@ -285,6 +302,7 @@ export const ARView: React.FC = () => {
     if (viewer.model) {
        setModelLoaded(true);
        setDownloadProgress(100);
+       syncModelDimensions();
        applyColor();
     }
     updateDiagnostics();
@@ -421,7 +439,10 @@ export const ARView: React.FC = () => {
   };
 
   const adjustScale = (delta: number) => {
-    setCurrentScale(prev => Math.min(2.0, Math.max(0.2, prev + delta)));
+    setCurrentScale(prev => {
+      const next = Math.min(2.0, Math.max(0.2, prev + delta));
+      return Math.round(next * 100) / 100;
+    });
   };
 
   const handleAddToCart = () => {
@@ -442,6 +463,41 @@ export const ARView: React.FC = () => {
   const activeName = selectedVariant?.name || product.colorName || 'Base Finish';
   const maxAvailable = selectedVariant?.stock ?? product.stock;
   const inAR = arStatus === 'session-started' || arStatus === 'object-placed';
+
+  // Always express scaled furniture dimensions in centimeters (cm)
+  const INCH_TO_CM = 2.54;
+  const toCm = (value: number, unit?: 'cm' | 'in') => (unit === 'in' ? value * INCH_TO_CM : value);
+  const formatCm = (value: number) => {
+    const rounded = Math.round(value * 10) / 10;
+    return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+  };
+
+  const productDims = product.dimensions;
+  const hasProductDims =
+    Boolean(productDims) &&
+    (Number(productDims.width) > 0 || Number(productDims.height) > 0 || Number(productDims.depth) > 0);
+
+  const baseDimensionsCm = hasProductDims
+    ? {
+        width: toCm(Number(productDims.width) || 0, productDims.unit),
+        height: toCm(Number(productDims.height) || 0, productDims.unit),
+        depth: toCm(Number(productDims.depth) || 0, productDims.unit),
+      }
+    : modelDimensionsCm;
+
+  const hasDimensions = Boolean(
+    baseDimensionsCm &&
+      (baseDimensionsCm.width > 0 || baseDimensionsCm.height > 0 || baseDimensionsCm.depth > 0)
+  );
+  const scaledWidthCm = baseDimensionsCm ? baseDimensionsCm.width * currentScale : 0;
+  const scaledHeightCm = baseDimensionsCm ? baseDimensionsCm.height * currentScale : 0;
+  const scaledDepthCm = baseDimensionsCm ? baseDimensionsCm.depth * currentScale : 0;
+  const compactSizeCm = hasDimensions
+    ? `${formatCm(scaledWidthCm)}×${formatCm(scaledHeightCm)}×${formatCm(scaledDepthCm)} cm`
+    : '— cm';
+  const expandedSizeCm = hasDimensions
+    ? `${formatCm(scaledWidthCm)} × ${formatCm(scaledHeightCm)} × ${formatCm(scaledDepthCm)} cm`
+    : '— cm';
 
   const ModelViewer = 'model-viewer' as any;
 
@@ -557,10 +613,22 @@ export const ARView: React.FC = () => {
              </button>
            </div>
 
-           <div className="pointer-events-auto bg-black/40 backdrop-blur-md border border-white/20 rounded-2xl p-2 flex items-center gap-4">
-              <button onClick={() => adjustScale(-0.05)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white font-bold hover:bg-white/20">-</button>
-              <span className="text-white font-mono text-xs w-12 text-center">{Math.round(currentScale * 100)}%</span>
-              <button onClick={() => adjustScale(0.05)} className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white font-bold hover:bg-white/20">+</button>
+           <div className="pointer-events-auto bg-black/50 backdrop-blur-md border border-white/20 rounded-2xl px-3 py-2 flex items-center gap-3">
+              <button onClick={() => adjustScale(-0.05)} className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white font-bold hover:bg-white/20">-</button>
+              <button
+                type="button"
+                onClick={() => setCurrentScale(1.0)}
+                title={currentScale !== 1 ? 'Tap to reset to actual 1:1 size' : 'Actual size in cm (W × H × D)'}
+                className="text-center min-w-[120px] px-1"
+              >
+                <span className="text-white font-mono font-bold text-xs block whitespace-nowrap tabular-nums">
+                  {expandedSizeCm}
+                </span>
+                <span className="text-[9px] text-indigo-300 uppercase font-semibold tracking-wider block">
+                  {currentScale === 1 ? 'W × H × D (1:1)' : 'Tap to reset 1:1'}
+                </span>
+              </button>
+              <button onClick={() => adjustScale(0.05)} className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-white font-bold hover:bg-white/20">+</button>
            </div>
         </div>
       )}
@@ -687,24 +755,33 @@ export const ARView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Compact Scale Calibration */}
+              {/* Compact Size Calibration in Centimeters */}
               {!inAR && (
-                <div className="flex items-center gap-1 bg-black/40 border border-white/15 rounded-xl px-2 py-1 shrink-0">
+                <div className="flex items-center gap-1.5 bg-black/40 border border-white/15 rounded-xl px-2 py-1 shrink-0">
                   <button
                     onClick={() => adjustScale(-0.1)}
                     className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-white transition-all"
-                    title="Shrink scale"
+                    title="Decrease size"
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <div className="text-center px-1">
-                    <span className="text-xs font-mono font-bold text-white block leading-tight">{Math.round(currentScale * 100)}%</span>
-                    <span className="text-[8px] text-indigo-300 uppercase font-semibold tracking-tighter block">Scale</span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentScale(1.0)}
+                    title={currentScale !== 1 ? 'Tap to reset to actual 1:1 size' : 'Actual size in cm (W × H × D)'}
+                    className="text-center px-1 min-w-[88px]"
+                  >
+                    <span className="text-[11px] font-mono font-bold text-white block leading-tight whitespace-nowrap tabular-nums">
+                      {compactSizeCm}
+                    </span>
+                    <span className="text-[8px] text-indigo-300 uppercase font-semibold tracking-tighter block">
+                      {currentScale === 1 ? 'W×H×D (1:1)' : 'Tap to reset 1:1'}
+                    </span>
+                  </button>
                   <button
                     onClick={() => adjustScale(0.1)}
                     className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 active:scale-90 flex items-center justify-center text-white transition-all"
-                    title="Enlarge scale"
+                    title="Increase size"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>

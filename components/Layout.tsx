@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { ShoppingBag, Menu, X, Hexagon, User as UserIcon, LogOut, LogIn, Search, Bell, CheckCircle2, CheckCircle } from 'lucide-react';
+import { ShoppingBag, Menu, X, Hexagon, User as UserIcon, LogOut, LogIn, Search, Bell, CheckCircle2, CheckCircle, MessageSquare } from 'lucide-react';
 import { UserRole } from '../types';
 import { APP_NAME, NAV_ITEMS_ADMIN, resolveAssetUrl, getApiBaseUrl } from '../constants';
 import { useCart } from '../contexts/CartContext';
@@ -26,33 +26,46 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
   const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.SUPERADMIN;
+  const notificationChannelId = user ? (isAdmin ? 'admin' : user._id) : null;
 
   useEffect(() => {
-    if (user && !isAdmin) {
-      fetchNotifications();
-
-      // Establish Server-Sent Events (SSE) stream for real-time pushing
-      const sse = new EventSource(`${getApiBaseUrl()}/api/notifications/stream/${user._id}`);
-
-      sse.onmessage = (event) => {
-        try {
-          const newNotification = JSON.parse(event.data);
-          setNotifications(prev => [newNotification, ...prev]);
-        } catch (error) {
-          console.error("Failed to parse SSE notification:", error);
-        }
-      };
-
-      return () => {
-        sse.close();
-      };
+    if (!notificationChannelId) {
+      setNotifications([]);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAdmin]);
 
-  const fetchNotifications = async () => {
+    fetchNotifications(notificationChannelId);
+
+    // Establish Server-Sent Events (SSE) stream for real-time pushing
+    const sse = new EventSource(`${getApiBaseUrl()}/api/notifications/stream/${notificationChannelId}`);
+
+    sse.onmessage = (event) => {
+      try {
+        const newNotification = JSON.parse(event.data);
+        setNotifications(prev =>
+          prev.some(n => n._id === newNotification._id) ? prev : [newNotification, ...prev]
+        );
+      } catch (error) {
+        console.error("Failed to parse SSE notification:", error);
+      }
+    };
+
+    // Periodic fallback refresh for serverless environments where SSE memory isn't shared
+    const pollInterval = isAdmin
+      ? setInterval(() => fetchNotifications(notificationChannelId), 30000)
+      : null;
+
+    return () => {
+      sse.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notificationChannelId, isAdmin]);
+
+  const fetchNotifications = async (channelId = notificationChannelId) => {
+    if (!channelId) return;
     try {
-      const res = await fetch(`${getApiBaseUrl()}/api/notifications/${user?._id}`);
+      const res = await fetch(`${getApiBaseUrl()}/api/notifications/${channelId}`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data);
@@ -65,7 +78,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const markNotificationAsRead = async (id: string) => {
     try {
       await fetch(`${getApiBaseUrl()}/api/notifications/${id}/read`, { method: 'PATCH' });
-      setNotifications(notifications.map(n => n._id === id ? { ...n, isRead: true } : n));
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -73,9 +86,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const markAllAsRead = async () => {
     try {
-      if (!user) return;
-      await fetch(`${getApiBaseUrl()}/api/notifications/user/${user._id}/read-all`, { method: 'PATCH' });
-      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+      if (!notificationChannelId) return;
+      await fetch(`${getApiBaseUrl()}/api/notifications/user/${notificationChannelId}/read-all`, { method: 'PATCH' });
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }
@@ -242,12 +255,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </button>
               )}
 
-              {/* Notifications */}
-              {!isAdmin && user && (
+              {/* Notifications (Customers & Admins) */}
+              {user && (
                 <div className="relative flex">
                   <button
-                    onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                    onClick={() => {
+                      const nextOpen = !isNotificationsOpen;
+                      setIsNotificationsOpen(nextOpen);
+                      if (nextOpen && notificationChannelId) {
+                        fetchNotifications(notificationChannelId);
+                      }
+                    }}
                     className="text-slate-700 hover:text-indigo-600 transition-colors relative group"
+                    aria-label="Notifications"
                   >
                     <Bell className="w-6 h-6" />
                     {unreadCount > 0 && (
@@ -260,7 +280,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   {isNotificationsOpen && (
                     <div className="absolute -right-2 top-6 mt-2 w-80 bg-white rounded-lg shadow-xl border border-slate-100 p-0 overflow-hidden z-50">
                       <div className="flex justify-between items-center p-3 border-b border-slate-100 bg-slate-50">
-                        <span className="font-semibold text-slate-800">Notifications</span>
+                        <span className="font-semibold text-slate-800">
+                          {isAdmin ? 'Admin Notifications' : 'Notifications'}
+                        </span>
                         {unreadCount > 0 && (
                           <button onClick={markAllAsRead} className="text-xs text-indigo-600 hover:text-indigo-800 font-medium">
                             Mark all as read
@@ -278,17 +300,27 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 className={`p-3 border-b border-slate-50 last:border-b-0 hover:bg-slate-50 transition-colors cursor-pointer ${notif.isRead ? 'opacity-70' : 'bg-indigo-50/30'}`}
                                 onClick={() => {
                                   if (!notif.isRead) markNotificationAsRead(notif._id);
-                                  // Can navigate to order details page if needed: navigate(`/orders`)
+                                  setIsNotificationsOpen(false);
+                                  if (notif.type === 'ai_chat' && notif.productId) {
+                                    navigate(`/product/${notif.productId}`);
+                                  } else if (notif.type === 'order_status' && !isAdmin) {
+                                    navigate('/orders');
+                                  }
                                 }}
                               >
                                 <div className="flex gap-3">
                                   <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${notif.isRead ? 'bg-slate-100 text-slate-500' : 'bg-indigo-100 text-indigo-600'}`}>
-                                    <Bell className="w-4 h-4" />
+                                    {notif.type === 'ai_chat' ? <MessageSquare className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
                                   </div>
-                                  <div>
+                                  <div className="min-w-0">
                                     <p className={`text-sm ${notif.isRead ? 'text-slate-600' : 'font-semibold text-slate-800'}`}>
                                       {notif.message}
                                     </p>
+                                    {notif.type === 'ai_chat' && notif.answer && (
+                                      <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                                        AI: {notif.answer}
+                                      </p>
+                                    )}
                                     <p className="text-xs text-slate-400 mt-1">
                                       {new Date(notif.createdAt).toLocaleString()}
                                     </p>
