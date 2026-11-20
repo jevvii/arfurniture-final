@@ -50,7 +50,7 @@ export const AdminLogin: React.FC = () => {
                 required
                 value={identifier}
                 onChange={e => setIdentifier(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#8c572a] focus:ring-2 focus:ring-[#8c572a]/20 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#8c572a] focus:ring-2 focus:ring-[#8c572a]/20 outline-none transition-all"
                 placeholder="admin or admin@domain.com"
               />
             </div>
@@ -65,7 +65,7 @@ export const AdminLogin: React.FC = () => {
                 required
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#8c572a] focus:ring-2 focus:ring-[#8c572a]/20 outline-none transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#8c572a] focus:ring-2 focus:ring-[#8c572a]/20 outline-none transition-all"
                 placeholder="••••••••"
               />
             </div>
