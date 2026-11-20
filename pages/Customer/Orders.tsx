@@ -111,13 +111,13 @@ export const Orders: React.FC = () => {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">My Orders</h1>
-          <p className="text-sm sm:text-base text-slate-500 mt-1">Track and manage your recent purchases</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#faede1] font-serif">My Orders</h1>
+          <p className="text-sm sm:text-base text-[#d8c3b0] mt-1">Track and manage your recent purchases</p>
         </div>
         
         <button 
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 self-start md:self-auto"
+          className="flex items-center gap-2 text-[#e2ab72] font-medium hover:text-[#faede1] self-start md:self-auto transition-colors"
         >
           Continue Shopping <ChevronRight className="w-4 h-4" />
         </button>

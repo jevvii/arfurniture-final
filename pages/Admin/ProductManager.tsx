@@ -529,8 +529,8 @@ export const ProductManager: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Product Management</h1>
-          <p className="text-slate-500 text-sm">Manage inventory and AR assets</p>
+          <h1 className="text-2xl font-bold text-[#faede1] font-serif">Product Management</h1>
+          <p className="text-[#d8c3b0] text-sm">Manage inventory and AR assets</p>
         </div>
         <button
           onClick={handleCreate}
@@ -663,11 +663,11 @@ export const ProductManager: React.FC = () => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1">Product Name *</label>
-                      <input name="name" required value={formData.name || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Modern Sofa" />
+                      <input name="name" required value={formData.name || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Modern Sofa" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-slate-700 mb-1">Category</label>
-                      <select name="category" value={formData.category || 'Chairs'} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                      <select name="category" value={formData.category || 'Chairs'} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
                         <option value="Chairs">Chairs</option>
                         <option value="Sofas">Sofas</option>
                         <option value="Tables">Tables</option>
@@ -679,11 +679,11 @@ export const ProductManager: React.FC = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">Price ({CURRENCY}) *</label>
-                        <input type="number" step="0.01" min="0" name="price" required value={formData.price || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00" />
+                        <input type="number" step="0.01" min="0" name="price" required value={formData.price || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0.00" />
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-slate-700 mb-1">Stock *</label>
-                        <input type="number" min="0" name="stock" required value={formData.stock || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0" />
+                        <input type="number" min="0" name="stock" required value={formData.stock || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="0" />
                       </div>
                     </div>
                     <div className="flex gap-4 items-end">
@@ -694,7 +694,7 @@ export const ProductManager: React.FC = () => {
                           name="colorName"
                           value={formData.colorName || ''}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none h-[42px]"
+                          className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none h-[42px]"
                           placeholder="e.g. Light Oak"
                         />
                       </div>
@@ -924,7 +924,7 @@ export const ProductManager: React.FC = () => {
                           placeholder="Name (e.g. Red)"
                           value={newVariant.name}
                           onChange={e => setNewVariant(prev => ({ ...prev, name: e.target.value }))}
-                          className="flex-[2] px-3 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none h-[42px]"
+                          className="flex-[2] px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm focus:ring-2 focus:ring-indigo-500 outline-none h-[42px]"
                         />
                         <div className="flex-1 min-w-[120px]">
                           <ColorPicker
@@ -938,7 +938,7 @@ export const ProductManager: React.FC = () => {
                           min="0"
                           value={newVariant.stock}
                           onChange={e => setNewVariant(prev => ({ ...prev, stock: e.target.value }))}
-                          className="w-16 px-2 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-indigo-500 outline-none h-[42px]"
+                          className="w-16 px-2 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm focus:ring-2 focus:ring-indigo-500 outline-none h-[42px]"
                         />
                       </div>
 
@@ -971,7 +971,7 @@ export const ProductManager: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-                  <textarea name="description" rows={3} value={formData.description || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Product details..." />
+                  <textarea name="description" rows={3} value={formData.description || ''} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Product details..." />
                 </div>
 
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
@@ -979,19 +979,19 @@ export const ProductManager: React.FC = () => {
                   <div className="grid grid-cols-4 gap-3">
                     <div>
                       <span className="text-xs text-slate-500 mb-1 block">Width</span>
-                      <input type="number" name="width" value={formData.width || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="W" />
+                      <input type="number" name="width" value={formData.width || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm outline-none focus:border-indigo-500" placeholder="W" />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500 mb-1 block">Height</span>
-                      <input type="number" name="height" value={formData.height || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="H" />
+                      <input type="number" name="height" value={formData.height || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm outline-none focus:border-indigo-500" placeholder="H" />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500 mb-1 block">Depth</span>
-                      <input type="number" name="depth" value={formData.depth || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500" placeholder="D" />
+                      <input type="number" name="depth" value={formData.depth || ''} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 text-sm outline-none focus:border-indigo-500" placeholder="D" />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500 mb-1 block">Unit</span>
-                      <select name="unit" value={formData.unit || 'cm'} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-sm outline-none focus:border-indigo-500 bg-white">
+                      <select name="unit" value={formData.unit || 'cm'} onChange={handleInputChange} className="w-full px-3 py-2 rounded-md border border-slate-200 text-slate-900 text-sm outline-none focus:border-indigo-500 bg-white">
                         <option value="cm">cm</option>
                         <option value="in">in</option>
                       </select>

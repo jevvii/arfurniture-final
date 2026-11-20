@@ -139,8 +139,8 @@ export const OrderManagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Order Management</h1>
-          <p className="text-slate-500 text-sm">View, track and fulfill customer orders in real time</p>
+          <h1 className="text-2xl font-bold text-[#faede1] font-serif">Order Management</h1>
+          <p className="text-[#d8c3b0] text-sm">View, track and fulfill customer orders in real time</p>
         </div>
         
         {/* Filters */}
@@ -152,7 +152,7 @@ export const OrderManagement: React.FC = () => {
               placeholder="Search by order #, recipient, city, or phone..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-72 text-sm"
+              className="pl-9 pr-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none w-full sm:w-72 text-sm"
             />
           </div>
           
@@ -161,7 +161,7 @@ export const OrderManagement: React.FC = () => {
             <select 
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="pl-9 pr-8 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none bg-white w-full sm:w-40 text-sm"
+              className="pl-9 pr-8 py-2 rounded-lg border border-slate-200 text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none appearance-none bg-white w-full sm:w-40 text-sm"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>

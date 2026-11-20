@@ -10,7 +10,7 @@ import { ColorTintedImage } from '../../components/ColorTintedImage';
 const ProductCard: React.FC<{ product: Product }> = ({ product }) => (
   <Link
     to={`/product/${product._id}`}
-    className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col"
+    className="group block bg-white rounded-xl overflow-hidden border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 h-full flex flex-col"
   >
     <div className="aspect-[4/3] w-full overflow-hidden bg-slate-50 relative border-b border-slate-100">
       <ColorTintedImage
@@ -203,7 +203,7 @@ export const Shop: React.FC = () => {
         <section className="py-8 bg-[#2d1b10]/80 backdrop-blur-sm border border-[#6b4224]/50 rounded-3xl px-6 mb-12 -mx-2 md:mx-0 shadow-xl">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <span className="text-[#e2ab72] font-bold tracking-wider text-xs uppercase mb-2 block font-sans">Fresh Finds</span>
+              <span className="text-[#e2ab72] font-bold tracking-wider text-xs uppercase mb-2 block font-sans">Latest Pieces</span>
               <h2 className="text-3xl font-bold text-[#faede1] font-serif flex items-center gap-2">
                 New Arrivals
               </h2>
@@ -227,7 +227,7 @@ export const Shop: React.FC = () => {
         <section className="py-8 bg-[#2d1b10]/80 backdrop-blur-sm border border-[#6b4224]/50 rounded-3xl px-6 mb-12 -mx-2 md:mx-0 shadow-xl">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <span className="text-[#e2ab72] font-bold tracking-wider text-xs uppercase mb-2 block font-sans">Hand Picked</span>
+              <span className="text-[#e2ab72] font-bold tracking-wider text-xs uppercase mb-2 block font-sans">Popular Pieces</span>
               <h2 className="text-3xl font-bold text-[#faede1] font-serif">Featured Collection</h2>
             </div>
             <Link to="/?filter=featured" className="hidden md:flex items-center gap-2 text-sm font-bold text-[#e2ab72] hover:text-white transition-colors">

@@ -7,29 +7,29 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const generateProductDescription = async (productName: string, features: string): Promise<string> => {
   try {
-    if (!process.env.API_KEY) {
-        console.warn("No API Key found. Returning fallback text.");
-        return "Experience luxury and comfort with this exquisite piece, designed to elevate your living space.";
-    }
+        if (!process.env.API_KEY) {
+            console.warn("No API Key found. Returning fallback text.");
+            return "Solid Palochina wood furniture built for daily home use.";
+        }
 
-    const model = 'gemini-2.5-flash';
-    const prompt = `
-      You are a high-end furniture copywriter. 
-      Write a short, compelling, and elegant product description (max 50 words) for a piece of furniture named "${productName}".
+        const model = 'gemini-2.5-flash';
+        const prompt = `
+      You are a furniture product writer. 
+      Write a short, concrete product description (max 45 words) for a piece of furniture named "${productName}".
       Key features/style: ${features}.
-      Focus on lifestyle, comfort, and aesthetic appeal. Do not use hashtags.
+      Use plain, direct language about materials, size, and daily use. Avoid buzzwords, exaggeration, or hashtags.
     `;
 
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
-    });
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: prompt,
+        });
 
-    return response.text || "A beautiful addition to your home.";
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    return "Experience modern elegance with this premium furniture piece, crafted for style and durability.";
-  }
+        return response.text || "Solid wood furniture built for everyday home use.";
+    } catch (error) {
+        console.error("Gemini API Error:", error);
+        return "Solid Palochina wood furniture built for everyday home use.";
+    }
 };
 
 export const askProductAssistant = async (question: string, product: Product): Promise<string> => {

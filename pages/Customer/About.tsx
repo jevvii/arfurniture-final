@@ -9,10 +9,10 @@ export const About: React.FC = () => {
         <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('/philippine-solihiya-pattern.svg')]"></div>
         <div className="relative z-10 max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-[#faede1] mb-6">
-            Proudly Made in Valenzuela
+            Built in Valenzuela City
           </h1>
           <p className="text-xl text-[#d4bca7] mb-8 font-light">
-            Bringing sustainable Palochina wood furniture from our workshop to your home with AR technology.
+            Reclaimed Palochina furniture from our workshop to your room, with 1:1 AR preview before you order.
           </p>
         </div>
       </div>
@@ -22,11 +22,10 @@ export const About: React.FC = () => {
            <div>
               <h2 className="text-3xl font-bold text-[#341e10] mb-6 font-serif">Who We Are</h2>
               <p className="text-lg text-[#5a3821] mb-6 leading-relaxed">
-                Beauteous Palochina is a homegrown e-commerce platform rooted in Valenzuela City, the industrial gateway of Metro Manila. 
-                We specialize in crafting high-quality furniture from <strong>Palochina wood</strong>—upcycled, sustainable, and durable pine wood that brings a rustic charm to any space.
+                Beauteous Palochina builds solid wood furniture in Valenzuela City using reclaimed Palochina pine.
               </p>
               <p className="text-lg text-[#5a3821] mb-6 leading-relaxed">
-                We combine traditional Filipino craftsmanship with modern Augmented Reality (AR) technology, allowing you to visualize our locally made pieces in your home before you buy.
+                Before ordering, you can preview exact piece dimensions at 1:1 scale in your own room using Augmented Reality.
               </p>
               <div className="space-y-6">
                   <div className="flex items-start gap-4">
@@ -35,7 +34,7 @@ export const About: React.FC = () => {
                       </div>
                       <div>
                           <h3 className="font-bold text-[#341e10] text-lg">Workshop Location</h3>
-                          <p className="text-[#6d4529]">123 Gen. T. de Leon Street<br/>Valenzuela City, Metro Manila 1442</p>
+                          <p className="text-[#6d4529]">Gen. T. de Leon, Valenzuela City<br/>Metro Manila</p>
                       </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -44,14 +43,14 @@ export const About: React.FC = () => {
                       </div>
                       <div>
                           <h3 className="font-bold text-[#341e10] text-lg">Our Specialty</h3>
-                          <p className="text-slate-600">
-                            Custom Palochina and industrial-style furniture:
+                          <div className="text-[#6d4529]">
+                            Custom Palochina and steel-frame furniture:
                             <ul className="list-disc list-inside mt-1 text-sm">
-                                <li>Bed frames, dining sets, and multi-purpose racks</li>
-                                <li>Eco-friendly upcycled wood materials</li>
-                                <li>Affordable local pricing</li>
+                                <li>Bed frames, dining sets, and storage racks</li>
+                                <li>Reclaimed Palochina pine lumber</li>
+                                <li>Direct workshop pricing</li>
                             </ul>
-                          </p>
+                          </div>
                       </div>
                   </div>
                    <div className="flex items-start gap-4">
@@ -61,7 +60,7 @@ export const About: React.FC = () => {
                       <div>
                           <h3 className="font-bold text-[#341e10] text-lg">Established 2020</h3>
                           <p className="text-[#6d4529]">
-                             Starting as a small backyard workshop during the pandemic, we have grown to serve thousands of Filipino homes with sturdy, stylish, and sustainable furniture.
+                             Started as a backyard workshop in 2020, building made-to-order Palochina pieces for homes across Metro Manila.
                           </p>
                       </div>
                   </div>
@@ -73,49 +72,27 @@ export const About: React.FC = () => {
                 alt="Palochina Furniture"
                 className="w-full h-full object-cover"
               />
-              <div className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-sm p-4 rounded-xl max-w-xs">
-                  <p className="text-sm font-bold text-slate-900">"Matibay, Maganda, at Mura."</p>
-                  <p className="text-xs text-slate-500 mt-1">- Tatak Valenzuela</p>
-              </div>
            </div>
         </div>
         <div className="py-8 border-t border-[#ebdcc8]">
             <div className="flex justify-between items-end mb-8 mt-8">
                 <div>
-                    <h2 className="text-3xl font-bold text-[#341e10] font-serif">Our Palochina Collection</h2>
-                    <p className="text-[#6d4529] mt-2">Real Pinoy homes transformed with Beauteous Palochina pieces.</p>
+                    <h2 className="text-3xl font-bold text-[#341e10] font-serif">Workshop Pieces</h2>
+                    <p className="text-[#6d4529] mt-2">Recent Palochina builds from our Valenzuela workshop.</p>
                 </div>
                 <Link to="/" className="text-[#8c572a] font-bold hover:underline flex items-center gap-2">
                     Explore Shop <ArrowRight className="w-4 h-4" />
                 </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div className="group relative overflow-hidden rounded-xl aspect-[4/3] cursor-pointer">
-                    <img src="https://i.ytimg.com/vi/hbsNo-u_pHg/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAklslzmtLeq8m1fGLiSoMpty36Mw" alt="Palochina Bed" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
-                        <div>
-                            <p className="text-white font-bold text-lg">Rustic Bed Frame</p>
-                            <p className="text-white/80 text-sm">Solid Palochina</p>
-                        </div>
-                    </div>
+                <div className="group relative overflow-hidden rounded-xl aspect-[4/3]">
+                    <img src="https://i.ytimg.com/vi/hbsNo-u_pHg/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAklslzmtLeq8m1fGLiSoMpty36Mw" alt="Palochina Bed Frame" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                 </div>
-                <div className="group relative overflow-hidden rounded-xl aspect-[4/3] cursor-pointer">
-                    <img src="https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=800&q=80" alt="Plant Rack" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
-                        <div>
-                            <p className="text-white font-bold text-lg">Multi-Purpose Rack</p>
-                            <p className="text-white/80 text-sm">Varnished Finish</p>
-                        </div>
-                    </div>
+                <div className="group relative overflow-hidden rounded-xl aspect-[4/3]">
+                    <img src="https://images.unsplash.com/photo-1595428774223-ef52624120d2?auto=format&fit=crop&w=800&q=80" alt="Multi-Purpose Rack" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                 </div>
-                <div className="group relative overflow-hidden rounded-xl aspect-[4/3] cursor-pointer">
-                    <img src="https://images.unsplash.com/photo-1604578762246-41134e37f9cc?auto=format&fit=crop&w=800&q=80" alt="Dining Set" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-6">
-                        <div>
-                            <p className="text-white font-bold text-lg">Dining Set</p>
-                            <p className="text-white/80 text-sm">4-Seater Custom</p>
-                        </div>
-                    </div>
+                <div className="group relative overflow-hidden rounded-xl aspect-[4/3]">
+                    <img src="https://images.unsplash.com/photo-1604578762246-41134e37f9cc?auto=format&fit=crop&w=800&q=80" alt="Palochina Dining Set" className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500" />
                 </div>
             </div>
         </div>

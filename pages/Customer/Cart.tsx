@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { 
     Trash2, ArrowRight, CreditCard, MapPin, Plus, Check, X, Phone, User, Home, 
     CheckCircle, CheckCircle2, Edit, Minus, ChevronDown, Keyboard, Truck, Wallet, 
-    ShieldCheck, ShoppingBag, ArrowLeft, ExternalLink, Sparkles
+    ShieldCheck, ShoppingBag, ArrowLeft, ExternalLink 
 } from 'lucide-react';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -427,23 +427,22 @@ export const Cart: React.FC = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 relative">
-            <h1 className="text-3xl font-bold text-slate-900 mb-8">Shopping Cart</h1>
+            <h1 className="text-3xl font-bold text-[#faede1] font-serif mb-8">Shopping Cart</h1>
 
-            {/* Guest Shopping Prompt (Jakob's Law: Non-intrusive value prop) */}
             {!user && (
-                <div className="mb-8 bg-gradient-to-r from-indigo-50 via-slate-50 to-blue-50 border border-indigo-100 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+                <div className="mb-8 bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
                     <div className="flex items-center gap-3.5">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-200">
-                            <Sparkles className="w-5 h-5" />
+                        <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                            <ShoppingBag className="w-5 h-5" />
                         </div>
                         <div>
-                            <h4 className="text-sm font-bold text-slate-900">Shopping as a Guest</h4>
-                            <p className="text-xs text-slate-600 mt-0.5">Sign in to save your cart across devices, access saved shipping addresses, and track delivery progress in real time.</p>
+                            <h4 className="text-sm font-bold text-slate-900">Guest Cart</h4>
+                            <p className="text-xs text-slate-600 mt-0.5">Sign in to save your cart across devices, use saved addresses, and track deliveries.</p>
                         </div>
                     </div>
                     <button
                         onClick={() => setAuthModalOpen(true)}
-                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shrink-0 shadow-md shadow-indigo-200 hover:shadow-indigo-300"
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl transition-all shrink-0"
                     >
                         Sign In / Register
                     </button>
@@ -451,14 +450,14 @@ export const Cart: React.FC = () => {
             )}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                 <div className="lg:col-span-2">
-                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-slate-200">
+                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-[#6b4224]/40">
                         <input
                             type="checkbox"
                             checked={cart.length > 0 && selectedItems.size === cart.length}
                             onChange={toggleSelectAll}
                             className="w-5 h-5 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
                         />
-                        <span className="text-sm font-semibold text-slate-700">Select All ({cart.length} items)</span>
+                        <span className="text-sm font-semibold text-[#faede1]">Select All ({cart.length} items)</span>
                     </div>
                     <div className="space-y-6">
                         {cart.map((item) => {
@@ -733,7 +732,7 @@ export const Cart: React.FC = () => {
                                                                 required
                                                                 value={checkoutForm.recipientName}
                                                                 onChange={e => setCheckoutForm({ ...checkoutForm, recipientName: e.target.value })}
-                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-medium"
+                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-medium"
                                                                 placeholder="e.g. Juan Dela Cruz"
                                                             />
                                                         </div>
@@ -748,7 +747,7 @@ export const Cart: React.FC = () => {
                                                                 value={checkoutForm.contactNumber}
                                                                 onChange={e => handleContactNumberChange(e.target.value)}
                                                                 maxLength={11}
-                                                                className={`w-full pl-9 pr-4 py-2.5 rounded-xl border focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-mono ${
+                                                                className={`w-full pl-9 pr-4 py-2.5 rounded-xl border bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-mono ${
                                                                     checkoutForm.contactNumber && !validatePhoneNumber(checkoutForm.contactNumber)
                                                                         ? 'border-red-300 focus:border-red-500'
                                                                         : 'border-slate-200 focus:border-indigo-500'
@@ -820,7 +819,7 @@ export const Cart: React.FC = () => {
                                                                 required
                                                                 value={checkoutForm.street}
                                                                 onChange={e => setCheckoutForm({ ...checkoutForm, street: e.target.value })}
-                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
                                                                 placeholder="e.g. Unit 4B, 123 Mahogany Ave."
                                                             />
                                                         </div>
@@ -833,13 +832,13 @@ export const Cart: React.FC = () => {
                                                                 required
                                                                 value={checkoutForm.state}
                                                                 onChange={e => setCheckoutForm({ ...checkoutForm, state: e.target.value })}
-                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
                                                                 placeholder="Metro Manila"
                                                             />
                                                         ) : (
                                                             <select
                                                                 required
-                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
                                                                 value={checkoutForm.state}
                                                                 onChange={e => handleCheckoutProvinceChange(e.target.value)}
                                                             >
@@ -856,13 +855,13 @@ export const Cart: React.FC = () => {
                                                                 required
                                                                 value={checkoutForm.city}
                                                                 onChange={e => setCheckoutForm({ ...checkoutForm, city: e.target.value })}
-                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
                                                                 placeholder="City / Municipality"
                                                             />
                                                         ) : (
                                                             <select
                                                                 required
-                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
+                                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm bg-white"
                                                                 value={checkoutForm.city}
                                                                 onChange={e => setCheckoutForm({ ...checkoutForm, city: e.target.value })}
                                                             >
@@ -879,7 +878,7 @@ export const Cart: React.FC = () => {
                                                                 type="text"
                                                                 value={checkoutForm.landmark}
                                                                 onChange={e => setCheckoutForm({ ...checkoutForm, landmark: e.target.value })}
-                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
+                                                                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm"
                                                                 placeholder="Near Barangay Hall or Gate 2"
                                                             />
                                                         </div>
@@ -891,7 +890,7 @@ export const Cart: React.FC = () => {
                                                             required
                                                             value={checkoutForm.zipCode}
                                                             onChange={e => setCheckoutForm({ ...checkoutForm, zipCode: e.target.value })}
-                                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-mono"
+                                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none text-sm font-mono"
                                                             placeholder="e.g. 1000"
                                                         />
                                                     </div>

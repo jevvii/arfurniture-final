@@ -61,12 +61,12 @@ export const AdminDashboard: React.FC = () => {
     <div className="max-w-7xl mx-auto px-4 py-10">
       <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2 font-serif">Dashboard Overview</h1>
-          <p className="text-slate-500">Welcome back, <span className="font-semibold text-slate-700">{user?.name}</span>. Here's what's happening today.</p>
+          <h1 className="text-3xl font-bold text-[#faede1] mb-2 font-serif">Dashboard Overview</h1>
+          <p className="text-[#d8c3b0]">Welcome back, <span className="font-semibold text-[#faede1]">{user?.name}</span>. Here's what's happening today.</p>
         </div>
         <div className="hidden sm:block text-right">
-          <div className="text-sm font-medium text-slate-400 uppercase tracking-widest mb-1">Current Date</div>
-          <div className="text-lg font-bold text-slate-700">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+          <div className="text-sm font-medium text-[#c29467] uppercase tracking-widest mb-1">Current Date</div>
+          <div className="text-lg font-bold text-[#faede1]">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
         </div>
       </div>
 

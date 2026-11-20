@@ -193,9 +193,6 @@ export const ProductDetail: React.FC = () => {
                   color={selectedVariant?.color || product.color}
                   onARClick={() => isMobile ? navigate(`/ar/${product._id}`) : setIsQRModalOpen(true)}
                 />
-                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-lg text-xs font-medium text-slate-600 pointer-events-none z-10">
-                  Interactive 3D
-                </div>
               </div>
             ) : (
               <div className="w-full h-full animate-in fade-in duration-500">
@@ -401,9 +398,9 @@ export const ProductDetail: React.FC = () => {
                   <ShieldCheck className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-[#faede1] text-sm mb-1">Pinoy Craftsmanship Warranty</h4>
+                  <h4 className="font-bold text-[#faede1] text-sm mb-1">3-Year Joinery Warranty</h4>
                   <p className="text-sm text-[#d8c3b0] leading-snug">
-                    Includes a 3-year warranty covering joinery, hardware, and structural Palochina durability.
+                    Covers joinery, hardware, and Palochina frame structure for 3 years.
                   </p>
                 </div>
               </div>
@@ -472,8 +469,8 @@ export const ProductDetail: React.FC = () => {
       </div>
 
       {/* You May Also Like Section */}
-      <div className="border-t border-slate-200 pt-12 pb-12">
-        <h2 className="text-2xl font-bold text-slate-900 font-serif mb-8">You may also like</h2>
+      <div className="border-t border-[#6b4224]/40 pt-12 pb-12">
+        <h2 className="text-2xl font-bold text-[#faede1] font-serif mb-8">You may also like</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {relatedProducts.map((rp) => (
             <Link

@@ -257,7 +257,7 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                               type="text"
                               required
                               placeholder="Unit, Building, Street Name"
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                               value={addressForm.street}
                               onChange={e => setAddressForm({...addressForm, street: e.target.value})}
                           />
@@ -271,14 +271,14 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                                     type="text"
                                     required
                                     placeholder="Province"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                                     value={addressForm.state}
                                     onChange={e => setAddressForm({...addressForm, state: e.target.value})}
                                 />
                               ) : (
                                 <select
                                     required
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all bg-white"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all bg-white"
                                     value={addressForm.state}
                                     onChange={e => handleProvinceChange(e.target.value)}
                                 >
@@ -294,14 +294,14 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                                     type="text"
                                     required
                                     placeholder="City"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                                     value={addressForm.city}
                                     onChange={e => setAddressForm({...addressForm, city: e.target.value})}
                                 />
                               ) : (
                                 <select
                                     required
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all bg-white"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all bg-white"
                                     value={addressForm.city}
                                     onChange={e => setAddressForm({...addressForm, city: e.target.value})}
                                 >
@@ -319,7 +319,7 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                                   type="text"
                                   required
                                   placeholder="ZIP Code"
-                                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                                   value={addressForm.zipCode}
                                   onChange={e => setAddressForm({...addressForm, zipCode: e.target.value})}
                               />
@@ -330,7 +330,7 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                                   type="text"
                                   required
                                   placeholder="Country"
-                                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 bg-slate-50"
+                                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400 bg-slate-50"
                                   value={addressForm.country}
                                   readOnly
                               />
@@ -342,7 +342,7 @@ export const AddressManager: React.FC<AddressManagerProps> = ({ userId, selected
                           <input
                               type="text"
                               placeholder="e.g., Beside the pharmacy"
-                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
+                              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all placeholder:text-slate-400"
                               value={addressForm.landmark}
                               onChange={e => setAddressForm({...addressForm, landmark: e.target.value})}
                           />

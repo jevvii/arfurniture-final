@@ -214,8 +214,8 @@ export const MarketingManager: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Marketing Manager</h1>
-                    <p className="text-slate-500 text-sm">Manage front-page carousel banners</p>
+                    <h1 className="text-2xl font-bold text-[#faede1] font-serif">Marketing Manager</h1>
+                    <p className="text-[#d8c3b0] text-sm">Manage front-page carousel banners</p>
                 </div>
                 <button
                     onClick={handleCreate}
@@ -347,33 +347,33 @@ export const MarketingManager: React.FC = () => {
                                     <div className="space-y-4">
                                         <div>
                                             <label className="block text-sm font-semibold text-slate-700 mb-1">Title *</label>
-                                            <input name="title" required value={formData.title} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Summer Sale" />
+                                            <input name="title" required value={formData.title} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="e.g. Summer Sale" />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-slate-700 mb-1">Subtitle</label>
-                                            <input name="subtitle" value={formData.subtitle} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. up to 50% off" />
+                                            <input name="subtitle" value={formData.subtitle} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. up to 50% off" />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold text-slate-700 mb-1">Badge Text</label>
-                                            <input name="badgeText" value={formData.badgeText} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. HOT" />
+                                            <input name="badgeText" value={formData.badgeText} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. HOT" />
                                         </div>
                                     </div>
 
                                     <div className="space-y-4">
                                         <div>
                                             <label className="block text-sm font-semibold text-slate-700 mb-1">Description *</label>
-                                            <textarea name="description" required rows={3} value={formData.description} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Brief description visible on the banner..." />
+                                            <textarea name="description" required rows={3} value={formData.description} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none resize-none" placeholder="Brief description visible on the banner..." />
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="block text-sm font-semibold text-slate-700 mb-1">Button Text *</label>
-                                                <input name="buttonText" required value={formData.buttonText} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. SHOP NOW" />
+                                                <input name="buttonText" required value={formData.buttonText} onChange={handleInputChange} className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. SHOP NOW" />
                                             </div>
                                             <div>
                                                 <label className="block text-sm font-semibold text-slate-700 mb-1">Link URL *</label>
                                                 <div className="space-y-2">
                                                     <select 
-                                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-sm"
+                                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 text-slate-900 focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-sm"
                                                         value={PREDEFINED_LINKS.find(l => l.value === formData.link) ? formData.link : 'custom'}
                                                         onChange={(e) => {
                                                             if (e.target.value !== 'custom') {
@@ -391,7 +391,7 @@ export const MarketingManager: React.FC = () => {
                                                         required 
                                                         value={formData.link} 
                                                         onChange={handleInputChange} 
-                                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" 
+                                                        className="w-full px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500 outline-none text-sm" 
                                                         placeholder="e.g. /?filter=sale" 
                                                     />
                                                 </div>

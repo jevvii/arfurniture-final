@@ -10,7 +10,6 @@ import {
   Plus,
   Minus,
   QrCode,
-  Sparkles,
   Crosshair,
 } from 'lucide-react';
 import { Product, ProductVariant } from '../../types';
@@ -833,7 +832,7 @@ export const ARView: React.FC = () => {
                         : 'text-white/70 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    ⚡ Fast ARCore
+                    Fast ARCore
                   </button>
                   <button
                     type="button"
@@ -844,7 +843,7 @@ export const ARView: React.FC = () => {
                         : 'text-white/70 hover:text-white hover:bg-white/5'
                     }`}
                   >
-                    🌐 WebXR
+                    WebXR
                   </button>
                 </div>
               </div>

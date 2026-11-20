@@ -425,7 +425,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     placeholder="Search..."
                     value={searchInput}
                     onChange={(e) => setSearchInput(e.target.value)}
-                    className="w-full p-2 pl-4 pr-10 rounded-lg border border-slate-300 bg-slate-50"
+                    className="w-full p-2 pl-4 pr-10 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 placeholder:text-slate-400"
                   />
                   <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                     <Search className="w-4 h-4" />
@@ -507,11 +507,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   />
                   <div>
                     <span className="text-2xl font-bold font-serif text-[#faede1] block leading-tight">{storeSettings.name}</span>
-                    <span className="text-[11px] text-[#c29467] uppercase tracking-wider font-sans font-semibold">Tatak Valenzuela • Handcrafted Woodwork</span>
+                    <span className="text-[11px] text-[#c29467] uppercase tracking-wider font-sans font-semibold">Valenzuela City • Wood Furniture</span>
                   </div>
                 </div>
-                <p className="text-[#a8907a] max-w-sm text-sm leading-relaxed">
-                  Artisan Palochina and sustainable wooden furniture, proudly crafted in Valenzuela City, Philippines. Visualize authentic Pinoy craftsmanship in your living space with Augmented Reality.
+                <p className="text-[#d4bca7] max-w-sm text-sm leading-relaxed">
+                  Palochina and solid-wood furniture made in Valenzuela City. Preview each piece at full 1:1 scale in your room before ordering.
                 </p>
               </div>
               <div>

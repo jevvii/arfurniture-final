@@ -126,10 +126,10 @@ export const Profile: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center gap-4 mb-8">
-          <button onClick={() => navigate('/')} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-              <ArrowLeft className="w-6 h-6 text-slate-600" />
+          <button onClick={() => navigate('/')} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+              <ArrowLeft className="w-6 h-6 text-[#faede1]" />
           </button>
-          <h1 className="text-3xl font-bold text-slate-900">My Profile</h1>
+          <h1 className="text-3xl font-bold text-[#faede1] font-serif">My Profile</h1>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">
@@ -154,7 +154,7 @@ export const Profile: React.FC = () => {
                                   name="fname" 
                                   value={formData.fname} 
                                   onChange={handleChange}
-                                  className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                               />
                           </div>
                           <div>
@@ -164,7 +164,7 @@ export const Profile: React.FC = () => {
                                   name="mname" 
                                   value={formData.mname} 
                                   onChange={handleChange}
-                                  className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                               />
                           </div>
                           <div>
@@ -174,7 +174,7 @@ export const Profile: React.FC = () => {
                                   name="lname" 
                                   value={formData.lname} 
                                   onChange={handleChange}
-                                  className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                  className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                               />
                           </div>
                       </div>
@@ -198,7 +198,7 @@ export const Profile: React.FC = () => {
                                       onChange={handleChange}
                                       maxLength={11}
                                       placeholder="09171234567"
-                                      className="w-full pl-9 p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                                      className="w-full pl-9 p-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
                                   />
                               </div>
                               {formData.contactNumber && !validatePhoneNumber(formData.contactNumber) && (
@@ -219,7 +219,7 @@ export const Profile: React.FC = () => {
                                       placeholder="Current Password"
                                       value={formData.currentPassword} 
                                       onChange={handleChange}
-                                      className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                      className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                                   />
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -229,7 +229,7 @@ export const Profile: React.FC = () => {
                                       placeholder="New Password"
                                       value={formData.newPassword} 
                                       onChange={handleChange}
-                                      className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                      className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                                   />
                                   <input 
                                       type="password" 
@@ -237,7 +237,7 @@ export const Profile: React.FC = () => {
                                       placeholder="Confirm New Password"
                                       value={formData.confirmPassword} 
                                       onChange={handleChange}
-                                      className="w-full p-2.5 rounded-lg border border-slate-200 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                      className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
                                   />
                               </div>
                           </div>

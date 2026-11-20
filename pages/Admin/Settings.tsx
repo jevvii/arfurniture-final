@@ -255,8 +255,8 @@ export const Settings: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-900">Store Settings</h1>
-        <p className="text-slate-500 mt-1">Manage your store's general information and branding.</p>
+        <h1 className="text-2xl font-bold text-[#faede1] font-serif">Store Settings</h1>
+        <p className="text-[#d8c3b0] mt-1">Manage your store's general information and branding.</p>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
@@ -285,7 +285,7 @@ export const Settings: React.FC = () => {
                 id="storeName"
                 value={settings.storeName}
                 onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
-                className="w-full max-w-md px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-colors"
+                className="w-full max-w-md px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 transition-colors"
                 placeholder="Enter store name"
                 required
               />
@@ -469,7 +469,7 @@ export const Settings: React.FC = () => {
                     required
                     value={staffForm.fname}
                     onChange={e => setStaffForm({...staffForm, fname: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div className="col-span-1">
@@ -478,7 +478,7 @@ export const Settings: React.FC = () => {
                     type="text"
                     value={staffForm.mname}
                     onChange={e => setStaffForm({...staffForm, mname: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div className="col-span-1">
@@ -488,7 +488,7 @@ export const Settings: React.FC = () => {
                     required
                     value={staffForm.lname}
                     onChange={e => setStaffForm({...staffForm, lname: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -500,7 +500,7 @@ export const Settings: React.FC = () => {
                   required
                   value={staffForm.email}
                   onChange={e => setStaffForm({...staffForm, email: e.target.value})}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
@@ -512,7 +512,7 @@ export const Settings: React.FC = () => {
                     required
                     value={staffForm.username}
                     onChange={e => setStaffForm({...staffForm, username: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div>
@@ -520,7 +520,7 @@ export const Settings: React.FC = () => {
                   <select
                     value={staffForm.role}
                     onChange={e => setStaffForm({...staffForm, role: e.target.value as any})}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 bg-white"
                   >
                     <option value="admin">Admin</option>
                     <option value="superadmin">Super Admin</option>
@@ -538,7 +538,7 @@ export const Settings: React.FC = () => {
                   minLength={6}
                   value={staffForm.password}
                   onChange={e => setStaffForm({...staffForm, password: e.target.value})}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   placeholder={editingStaffId ? "Min. 6 characters (optional)" : "Min. 6 characters"}
                 />
               </div>
