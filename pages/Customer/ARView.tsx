@@ -201,12 +201,68 @@ export const ARView: React.FC = () => {
     setDiagnostics(d);
   };
 
-  // Pre-compute Scene Viewer intent URL for Android (mode=ar_only for instant camera & floor lock)
+  // Always express scaled furniture dimensions in centimeters (cm)
+  const INCH_TO_CM = 2.54;
+  const toCm = (value: number, unit?: 'cm' | 'in') => (unit === 'in' ? value * INCH_TO_CM : value);
+  const formatCm = (value: number) => {
+    const rounded = Math.round(value * 10) / 10;
+    return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+  };
+
+  const productDims = product?.dimensions;
+  const hasProductDims =
+    Boolean(productDims) &&
+    (Number(productDims?.width) > 0 || Number(productDims?.height) > 0 || Number(productDims?.depth) > 0);
+
+  const baseDimensionsCm = hasProductDims && productDims
+    ? {
+        width: toCm(Number(productDims.width) || 0, productDims.unit),
+        height: toCm(Number(productDims.height) || 0, productDims.unit),
+        depth: toCm(Number(productDims.depth) || 0, productDims.unit),
+      }
+    : modelDimensionsCm;
+
+  const hasDimensions = Boolean(
+    baseDimensionsCm &&
+      (baseDimensionsCm.width > 0 || baseDimensionsCm.height > 0 || baseDimensionsCm.depth > 0)
+  );
+  const scaledWidthCm = baseDimensionsCm ? baseDimensionsCm.width * currentScale : 0;
+  const scaledHeightCm = baseDimensionsCm ? baseDimensionsCm.height * currentScale : 0;
+  const scaledDepthCm = baseDimensionsCm ? baseDimensionsCm.depth * currentScale : 0;
+  const compactSizeCm = hasDimensions
+    ? `${formatCm(scaledWidthCm)}×${formatCm(scaledHeightCm)}×${formatCm(scaledDepthCm)} cm`
+    : '— cm';
+  const expandedSizeCm = hasDimensions
+    ? `${formatCm(scaledWidthCm)} × ${formatCm(scaledHeightCm)} × ${formatCm(scaledDepthCm)} cm`
+    : '— cm';
+
+  // Pre-compute Scene Viewer intent URL for Android & Quick Look banner URL for iOS
   const modelUrl = resolveAssetUrl(product?.arModelUrl);
   const usdzUrl = product?.usdzUrl ? resolveAssetUrl(product.usdzUrl) : undefined;
+  const quickLookUsdzUrl = React.useMemo(() => {
+    if (!usdzUrl || !product) return undefined;
+    const subtitle = hasDimensions
+      ? `Size: ${expandedSizeCm} (W×H×D)`
+      : (product.category || 'Actual Size');
+    const params = [
+      `checkoutTitle=${encodeURIComponent(product.name)}`,
+      `checkoutSubtitle=${encodeURIComponent(subtitle)}`,
+      `price=${encodeURIComponent(`${CURRENCY}${product.price.toLocaleString()}`)}`,
+      `callToAction=${encodeURIComponent('Add to Cart')}`,
+    ];
+    if (typeof window !== 'undefined') {
+      const canonical = `${window.location.protocol}//${window.location.host}/product/${product._id}`;
+      params.push(`canonicalWebPageURL=${encodeURIComponent(canonical)}`);
+    }
+    return `${usdzUrl}#${params.join('&')}`;
+  }, [usdzUrl, product, hasDimensions, expandedSizeCm]);
+
   const intentUrl = React.useMemo(() => {
     if (!modelUrl || !platform.isAndroid || !product) return '';
-    const title = encodeURIComponent(product.name || 'Furniture');
+    const titleText = hasDimensions
+      ? `${product.name || 'Furniture'} (${expandedSizeCm})`
+      : (product.name || 'Furniture');
+    const title = encodeURIComponent(titleText);
     const canonicalLink = encodeURIComponent(
       typeof window !== 'undefined'
         ? `${window.location.protocol}//${window.location.host}/product/${product._id}`
@@ -226,7 +282,7 @@ export const ARView: React.FC = () => {
       `action=android.intent.action.VIEW;` +
       `end;`
     );
-  }, [modelUrl, platform.isAndroid, product]);
+  }, [modelUrl, platform.isAndroid, product, hasDimensions, expandedSizeCm]);
 
   // Listen for model load, download progress, and AR status
   useEffect(() => {
@@ -293,10 +349,17 @@ export const ARView: React.FC = () => {
       }
     };
 
+    const handleQuickLookButtonTapped = () => {
+      if (product) {
+        addToCart(product, selectedVariant, 1);
+      }
+    };
+
     viewer.addEventListener('progress', handleProgress);
     viewer.addEventListener('load', handleLoad);
     viewer.addEventListener('error', handleError);
     viewer.addEventListener('ar-status', handleArStatus);
+    viewer.addEventListener('quick-look-button-tapped', handleQuickLookButtonTapped);
 
     if (viewer.model) {
        setModelLoaded(true);
@@ -311,6 +374,7 @@ export const ARView: React.FC = () => {
       viewer.removeEventListener('load', handleLoad);
       viewer.removeEventListener('error', handleError);
       viewer.removeEventListener('ar-status', handleArStatus);
+      viewer.removeEventListener('quick-look-button-tapped', handleQuickLookButtonTapped);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product, selectedVariant]);
@@ -463,41 +527,6 @@ export const ARView: React.FC = () => {
   const maxAvailable = selectedVariant?.stock ?? product.stock;
   const inAR = arStatus === 'session-started' || arStatus === 'object-placed';
 
-  // Always express scaled furniture dimensions in centimeters (cm)
-  const INCH_TO_CM = 2.54;
-  const toCm = (value: number, unit?: 'cm' | 'in') => (unit === 'in' ? value * INCH_TO_CM : value);
-  const formatCm = (value: number) => {
-    const rounded = Math.round(value * 10) / 10;
-    return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
-  };
-
-  const productDims = product.dimensions;
-  const hasProductDims =
-    Boolean(productDims) &&
-    (Number(productDims.width) > 0 || Number(productDims.height) > 0 || Number(productDims.depth) > 0);
-
-  const baseDimensionsCm = hasProductDims
-    ? {
-        width: toCm(Number(productDims.width) || 0, productDims.unit),
-        height: toCm(Number(productDims.height) || 0, productDims.unit),
-        depth: toCm(Number(productDims.depth) || 0, productDims.unit),
-      }
-    : modelDimensionsCm;
-
-  const hasDimensions = Boolean(
-    baseDimensionsCm &&
-      (baseDimensionsCm.width > 0 || baseDimensionsCm.height > 0 || baseDimensionsCm.depth > 0)
-  );
-  const scaledWidthCm = baseDimensionsCm ? baseDimensionsCm.width * currentScale : 0;
-  const scaledHeightCm = baseDimensionsCm ? baseDimensionsCm.height * currentScale : 0;
-  const scaledDepthCm = baseDimensionsCm ? baseDimensionsCm.depth * currentScale : 0;
-  const compactSizeCm = hasDimensions
-    ? `${formatCm(scaledWidthCm)}×${formatCm(scaledHeightCm)}×${formatCm(scaledDepthCm)} cm`
-    : '— cm';
-  const expandedSizeCm = hasDimensions
-    ? `${formatCm(scaledWidthCm)} × ${formatCm(scaledHeightCm)} × ${formatCm(scaledDepthCm)} cm`
-    : '— cm';
-
   const ModelViewer = 'model-viewer' as any;
 
   return (
@@ -507,7 +536,7 @@ export const ARView: React.FC = () => {
         <ModelViewer
           ref={viewerRef}
           src={modelUrl}
-          ios-src={usdzUrl}
+          ios-src={quickLookUsdzUrl}
           poster={resolveAssetUrl(product.imageUrl)}
           alt={`AR view of ${product.name}`}
           shadow-intensity="1.8"
